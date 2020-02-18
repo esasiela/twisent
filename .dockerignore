@@ -1,3 +1,10 @@
-.git
-.gitignore
-**/node_modules
+# Disallow all files, whitelist only those you want
+*
+
+# allow....
+!*.py
+!*.json
+!model/
+!static/
+!templates/
+!instance/
