@@ -9,7 +9,7 @@ from wtforms.validators import DataRequired
 
 
 # Create the Flask app, load default config from config.py, load secret config from instance/config.py
-app = Flask(__name__, instance_relative_config=True)
+app = Flask(__name__)
 app.config.from_object('config')
 for k, v in app.config.items():
     if os.environ.get(k) is not None:
