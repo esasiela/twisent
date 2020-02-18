@@ -11,7 +11,10 @@ from wtforms.validators import DataRequired
 # Create the Flask app, load default config from config.py, load secret config from instance/config.py
 app = Flask(__name__, instance_relative_config=True)
 app.config.from_object('config')
-app.config.from_pyfile('config.py')
+for k, v in app.config.items():
+    if os.environ.get(k) is not None:
+        app.config[k] = os.environ.get(k)
+#app.config.from_pyfile('config.py')
 
 
 class TwisentForm(FlaskForm):
