@@ -31,14 +31,14 @@ def welcome():
 
 @app.route('/twisent', methods=['POST'])
 def twisent():
-    print("twisent()", flush=True)
+    #print("twisent()", flush=True)
     theme = app.config['THEME']
 
     form = TwisentForm()
     if form.validate_on_submit():
         # they gave a non-empty text field
-        print("twisent(), validation passed", flush=True)
-        print("twisent(), t=", form.t, "[", form.t.data, "]", flush=True)
+        #print("twisent(), validation passed", flush=True)
+        #print("twisent(), t=", form.t, "[", form.t.data, "]", flush=True)
 
         d = TwisentData()
         d.msg = "i have text"

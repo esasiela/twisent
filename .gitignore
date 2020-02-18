@@ -6,3 +6,4 @@ application.config
 development.config
 Dockerrun.local.json
 .elasticbeanstalk/
+instance/
