@@ -6,5 +6,5 @@
       "HostDirectory": "/var/app"
     }
   ],
-  "Logging": "/var/eb_log"
+  "Logging": "/var/twisent_log"
 }
