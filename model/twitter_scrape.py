@@ -13,12 +13,11 @@ def get_tweet_by_id(api: Api = None, status_id=None):
     return api.GetStatus(status_id=status_id)
 
 
-
 if __name__ == "__main__":
-    api = Api(consumer_key="W7oddRnrNR90nwZzKmd1FNCFz",
-                      consumer_secret="6u4G7GdAc5bQmUg06KYJkYDqLh9rO8JsFsBzmcARsg9aeVrxlk",
-                      access_token_key="1229455506621763584-XFZfG8Cw6KubEf2frran49fnkZaeRw",
-                      access_token_secret="xQN3yQG1bRdiKxPmjcnQyDk8XdMGZoRPpjuTxy7zD3jzj")
+    api = Api(consumer_key="",
+              consumer_secret="",
+              access_token_key="",
+              access_token_secret="")
 
     print("Verifying Twitter OAuth credentials:", api.VerifyCredentials())
 
