@@ -2,54 +2,51 @@ import os
 import sys
 import json
 
-from flask import Flask, request, Response, render_template
+from flask import Flask, request, Response, render_template, redirect, url_for
+from flask_wtf import FlaskForm
+from wtforms import StringField, SubmitField
+from wtforms.validators import DataRequired
 
 
-# Default config vals
-THEME = 'default' if os.environ.get('THEME') is None else os.environ.get('THEME')
-FLASK_DEBUG = 'false' if os.environ.get('FLASK_DEBUG') is None else os.environ.get('FLASK_DEBUG')
-
-# Create the Flask app
-application = Flask(__name__)
-
-# Load config values specified above
-application.config.from_object(__name__)
-
-# Load configuration vals from a file
-application.config.from_envvar('APP_CONFIG', silent=True)
-
-# Only enable Flask debugging if an env var is set to true
-application.debug = application.config['FLASK_DEBUG'] in ['true', 'True']
+# Create the Flask app, load default config from config.py, load secret config from instance/config.py
+app = Flask(__name__, instance_relative_config=True)
+app.config.from_object('config')
+app.config.from_pyfile('config.py')
 
 
-@application.route('/')
+class TwisentForm(FlaskForm):
+    t = StringField("Input", validators=[DataRequired()])
+    submit = SubmitField("Predict Sentiment")
+
+
+class TwisentData:
+    msg = ""
+
+
+@app.route('/')
 def welcome():
-    theme = application.config['THEME']
-    return render_template('index.html', theme=theme, flask_debug=application.debug)
+    theme = app.config['THEME']
+    return render_template('index.html', theme=theme, flask_debug=app.debug, form=TwisentForm(), data=None)
 
 
-@application.route('/signup', methods=['POST'])
-def signup():
-    signup_data = dict()
-    for item in request.form:
-        signup_data[item] = request.form[item]
+@app.route('/twisent', methods=['POST'])
+def twisent():
+    print("twisent()", flush=True)
+    theme = app.config['THEME']
 
-    try:
-        store_in_dynamo(signup_data)
-        publish_to_sns(signup_data)
-    except ConditionalCheckFailedException:
-        return Response("", status=409, mimetype='application/json')
+    form = TwisentForm()
+    if form.validate_on_submit():
+        # they gave a non-empty text field
+        print("twisent(), validation passed", flush=True)
+        print("twisent(), t=", form.t, "[", form.t.data, "]", flush=True)
 
-    return Response(json.dumps(signup_data), status=201, mimetype='application/json')
-
-
-def publish_to_sns(signup_data):
-    try:
-        sns_conn.publish(application.config['NEW_SIGNUP_TOPIC'], json.dumps(signup_data),
-                         "New signup: %s" % signup_data['email'])
-    except Exception as ex:
-        sys.stderr.write("Error publishing subscription message to SNS: %s" % ex.message)
+        d = TwisentData()
+        d.msg = "i have text"
+        return render_template('index.html', theme=theme, flask_debug=app.debug, form=form, data=d)
+        # return redirect(url_for('index'))
+    else:
+        return render_template('index.html', theme=theme, flask_debug=app.debug, form=form)
 
 
 if __name__ == '__main__':
-    application.run(host='0.0.0.0')
+    app.run(host='0.0.0.0')

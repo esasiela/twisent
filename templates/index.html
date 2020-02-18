@@ -9,10 +9,10 @@
     <title>Hedge Court - TwiSent</title>
 
     <!-- Bootstrap core CSS -->
-    <link href="{{ url_for('static', filename="bootstrap/css/theme/" + theme + "/bootstrap.css") }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='bootstrap/css/theme/' + theme + '/bootstrap.css') }}" rel="stylesheet">
 
     <!-- Custom styles for this template -->
-    <link href="{{ url_for('static', filename="bootstrap/css/jumbotron-narrow.css") }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='bootstrap/css/jumbotron-narrow.css') }}" rel="stylesheet">
 
   </head>
 
@@ -29,23 +29,15 @@
           -->
 
         </ul>
-        <h3 class="text-muted">Hedge Court - TwiSent</h3>
+        <h3 class="text-muted">{{ config.DISPLAY_APP_NAME }}</h3>
       </div>
-    	{% if flask_debug %}
+      {% if flask_debug %}
       <div class="alert alert-danger">
         Flask is in debug mode. This is not safe for production.
       </div>
-    	{% endif %}
-      <div id="signupSuccess" class="alert alert-success" style="display:none">
-        <p id="signupSuccessText">Thanks for signing up! You'll be among the first to know when we launch.</p>
-      </div>
-      <div id="signupDuplicate" class="alert alert-success" style="display:none">
-        <p id="signupDuplicateText">Fear not, you're already on the list! You'll be among the first to know when we launch.</p>
-      </div>
-      <div id="signupError" class="alert alert-info" style="display:none">
-        <p id="signupErrorText">Well this is embarrassing. It looks like we're having trouble getting you on the list.</p>
-      </div>
-      <div class="jumbotron">
+      {% endif %}
+
+       <div>
         <h1>Twitter Sentiment Analysis</h1>
         <p class="lead">The following input types are accepted:</p>
         <ul>
@@ -54,52 +46,40 @@
           <li>Twitter URL</li>
           <li>Status ID</li>
         </ul>
-        <p><a class="btn btn-lg btn-success"  data-toggle="modal" href="#signupModal">Sign up today</a></p>
+
+        <form action="{{ url_for('twisent') }}" method="post">
+          <div class="form-field">
+            {{ form.t(size=60) }} {{ form.submit }}
+            {% if form.t.errors %}
+              <ul class="errors">
+                {% for error in form.t.errors %}
+                  <li>{{ error }}</li>
+                {% endfor %}
+              </ul>
+            {% endif %}
+          </div>
+          {{ form.csrf_token }}
+        </form>
+
       </div>
 
+      {% if data is not none %}
+      <div>
+        <div>
+          <h3>Analysis Results</h3>
+        </div>
+        <pre>{{ data }}</pre>
+      </div>
+      {% endif %}
 
       <div class="footer">
         <p>&copy; Hedge Court 2020</p>
       </div>
 
-      <!-- Modal -->
-       <div class="modal fade" id="signupModal" tabindex="-1" role="dialog" aria-labelledby="signupModal" aria-hidden="true">
-         <div class="modal-dialog">
-           <div class="modal-content">
-             <div class="modal-header">
-               <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-               <h4 class="modal-title">Provide a few details and we'll be in touch...</h4>
-             </div>
-             <div class="modal-body">
-               <form id="signupForm" role="form">
-                 <input type="hidden" id="theme" name="theme" value="{{theme}}"/>
-                 <div class="form-group">
-                   <label for="name">Name</label>
-                   <input type="text" class="form-control" id="name" name="name" placeholder="Your name">
-                 </div>
-                 <div class="form-group">
-                   <label for="email">Email address</label>
-                   <input type="email" class="form-control" id="email" name="email" placeholder="Your email address">
-                 </div>
-                 <div class="form-group">
-                   <label for="previewAccess">Interested in Preview Access?</label>
-                   <select class="form-control" name="previewAccess">
-                     <option>Yes</option>
-                     <option>No</option>
-                   </select>
-                 </div>
-             </div>
-             <div class="modal-footer">
-               <button id="signup" type="button" class="btn btn-primary">Sign Up!</button>
-             </div>
-           </div><!-- /.modal-content -->
-         </div><!-- /.modal-dialog -->
-       </div><!-- /.modal -->
-
     </div> <!-- /container -->
 
-    <script src="{{ url_for('static', filename="jquery/jquery.js") }}"></script>
-    <script src="{{ url_for('static', filename="bootstrap/js/bootstrap.min.js") }}"></script>
+    <script src="{{ url_for('static', filename='jquery/jquery.js') }}"></script>
+    <script src="{{ url_for('static', filename='bootstrap/js/bootstrap.min.js') }}"></script>
     <script type="text/javascript">
     $(document).ready(function() {
       $("#signup").click(function() {
