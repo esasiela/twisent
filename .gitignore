@@ -1,0 +1,8 @@
+venv/
+.idea
+__pycache__
+release/
+application.config
+development.config
+Dockerrun.local.json
+.elasticbeanstalk/
