@@ -7,3 +7,4 @@ development.config
 Dockerrun.local.json
 .elasticbeanstalk/
 instance/
+data/

@@ -22,8 +22,8 @@
       <div class="header">
         <ul class="nav nav-pills pull-right">
           <li class="active"><a href="/">Home</a></li>
+          <li><a href="{{ url_for('pickle') }}">Pickle</a></li>
           <!--
-          <li><a href="#">About</a></li>
           <li><a href="#">Blog</a></li>
           <li><a href="#">Press</a></li>
           -->
@@ -41,7 +41,7 @@
         <h1>Twitter Sentiment Analysis</h1>
         <p class="lead">The following input types are accepted:</p>
         <ul>
-          <li>@username</li>
+          <li>@handle</li>
           <li>#hashtag</li>
           <li>Twitter URL</li>
           <li>Status ID</li>
@@ -68,7 +68,10 @@
         <div>
           <h3>Analysis Results</h3>
         </div>
-        <pre>{{ data }}</pre>
+        <pre>
+          msg: {{ data.msg }}
+          data: {{ data }}
+        </pre>
       </div>
       {% endif %}
 

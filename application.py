@@ -7,6 +7,10 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField
 from wtforms.validators import DataRequired
 
+# needed for the model
+from twisent_lib import predictors, spacy_tokenizer
+import pickle
+
 
 # Create the Flask app, load default config from config.py, load secret config from instance/config.py
 app = Flask(__name__)
@@ -14,7 +18,11 @@ app.config.from_object('config')
 for k, v in app.config.items():
     if os.environ.get(k) is not None:
         app.config[k] = os.environ.get(k)
-#app.config.from_pyfile('config.py')
+
+# global variable, suitable for demo purposes, not production
+meta_model = None
+with open("pickle/twisent_trained_model.pkl", "rb") as f:
+    meta_model = pickle.load(f)
 
 
 class TwisentForm(FlaskForm):
@@ -43,12 +51,24 @@ def twisent():
         #print("twisent(), validation passed", flush=True)
         #print("twisent(), t=", form.t, "[", form.t.data, "]", flush=True)
 
+        pred = meta_model['pipeline'].predict([form.t.data])
+        proba = meta_model['pipeline'].predict_proba([form.t.data])
         d = TwisentData()
-        d.msg = "i have text"
+        d.msg = "prediction: {0:d}, {1:.05f}".format(pred[0], proba[0, pred[0]])
+
         return render_template('index.html', theme=theme, flask_debug=app.debug, form=form, data=d)
         # return redirect(url_for('index'))
     else:
         return render_template('index.html', theme=theme, flask_debug=app.debug, form=form)
+
+
+@app.route('/pickle', methods=['GET'])
+def pickle():
+    theme = app.config['THEME']
+    d = TwisentData()
+    d.msg = str(meta_model)
+
+    return render_template('index.html', theme=theme, flask_debug=app.debug, form=TwisentForm(), data=d)
 
 
 if __name__ == '__main__':
