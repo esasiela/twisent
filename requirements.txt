@@ -21,7 +21,9 @@ joblib==0.14.1
 lxml==4.5.0
 MarkupSafe==1.1.1
 murmurhash==1.0.2
-numpy==1.18.1
+# EC2 only has default access to numpy==1.16.6, not the 1.18.1 that i see locally
+#numpy==1.18.1
+numpy==1.16.6
 oauthlib==3.1.0
 pandas==1.0.1
 plac==1.1.3
