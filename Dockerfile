@@ -4,10 +4,10 @@ FROM ubuntu:14.04
 RUN apt-get update -y
 
 # Install Python Setuptools
-RUN apt-get install -y python3-setuptools
+RUN apt-get install -y python3-setuptools python3-pip
 
 # Install pip
-RUN easy_install pip
+# RUN easy_install pip
 
 # Add and install Python modules
 COPY requirements.txt /src/requirements.txt
