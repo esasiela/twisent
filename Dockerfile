@@ -4,14 +4,14 @@ FROM ubuntu:14.04
 RUN apt-get update -y
 
 # Install Python Setuptools
-RUN apt-get install -y python-setuptools
+RUN apt-get install -y python3-setuptools
 
 # Install pip
-RUN easy_install pip3
+RUN easy_install pip
 
 # Add and install Python modules
 COPY requirements.txt /src/requirements.txt
-RUN cd /src; pip3 install -r requirements.txt
+RUN cd /src; pip install -r requirements.txt
 RUN cd /src; python3 -m spacy download en_core_web_sm
 
 # Bundle app source
