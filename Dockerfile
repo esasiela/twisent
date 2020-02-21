@@ -17,6 +17,7 @@ RUN cd /src; python -m spacy download en_core_web_sm
 
 # Bundle app source
 COPY . /src
+COPY ./pickle/twisent_trained_model.pkl /src/pickle/
 
 # Expose
 EXPOSE  5000
