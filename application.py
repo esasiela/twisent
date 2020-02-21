@@ -21,8 +21,8 @@ for k, v in app.config.items():
 
 # global variable, suitable for demo purposes, not production
 meta_model = None
-with open("pickle/twisent_trained_model.pkl", "rb") as f:
-    meta_model = pickle.load(f)
+#with open("pickle/twisent_trained_model.pkl", "rb") as f:
+#    meta_model = pickle.load(f)
 
 
 class TwisentForm(FlaskForm):
@@ -37,7 +37,9 @@ class TwisentData:
 @app.route('/')
 def welcome():
     theme = app.config['THEME']
-    return render_template('index.html', theme=theme, flask_debug=app.debug, form=TwisentForm(), data=None)
+    d = TwisentData()
+    d.msg = "working directory: " + os.getcwd() + "\n" + str(os.listdir(os.getcwd()))
+    return render_template('index.html', theme=theme, flask_debug=app.debug, form=TwisentForm(), data=d)
 
 
 @app.route('/twisent', methods=['POST'])
