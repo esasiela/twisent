@@ -3,3 +3,4 @@ DEBUG = False
 SECRET_KEY = "override me in env var"
 THEME = "default"
 DISPLAY_APP_NAME = "Hedge Court - TwiSent"
+PICKLE_PATH = "override me in env var"

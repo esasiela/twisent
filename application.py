@@ -21,8 +21,9 @@ for k, v in app.config.items():
 
 # global variable, suitable for demo purposes, not production
 meta_model = None
-#with open("pickle/twisent_trained_model.pkl", "rb") as f:
-#    meta_model = pickle.load(f)
+# "pickle/twisent_trained_model.pkl"
+with open(app.config['PICKLE_PATH'], "rb") as f:
+    meta_model = pickle.load(f)
 
 
 class TwisentForm(FlaskForm):
