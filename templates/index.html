@@ -11,8 +11,11 @@
     <!-- Bootstrap core CSS -->
     <link href="{{ url_for('static', filename='bootstrap/css/theme/' + theme + '/bootstrap.css') }}" rel="stylesheet">
 
-    <!-- Custom styles for this template -->
+    <!-- Override bootstrap styles for this template -->
     <link href="{{ url_for('static', filename='bootstrap/css/jumbotron-narrow.css') }}" rel="stylesheet">
+
+    <!-- Custom Twisent CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
 
   </head>
 
@@ -37,41 +40,129 @@
       </div>
       {% endif %}
 
-       <div>
-        <h1>Twitter Sentiment Analysis</h1>
-        <p class="lead">The following input types are accepted:</p>
-        <ul>
-          <li>@handle</li>
-          <li>#hashtag</li>
-          <li>Twitter URL</li>
-          <li>Status ID</li>
-        </ul>
+      <div>
+        <h1>Sentiment Analysis</h1>
 
-        <form action="{{ url_for('twisent') }}" method="post">
-          <div class="form-field">
-            {{ form.t(size=60) }} {{ form.submit }}
-            {% if form.t.errors %}
-              <ul class="errors">
-                {% for error in form.t.errors %}
-                  <li>{{ error }}</li>
-                {% endfor %}
+        <div role="tabpanel">
+          <ul class="nav nav-tabs" role="tablist">
+            <li role="presentation" class="{{ 'active' if active_tab == 'twitter' }}">
+              <a href="#twitter" ari-controls="twitter" role="tab" data-toggle="tab">Twitter</a>
+            </li>
+            <li role="presentation" class="{{ 'active' if active_tab == 'text' }}">
+              <a href="#text" ari-controls="text" role="tab" data-toggle="tab">Text</a>
+            </li>
+          </ul>
+
+          <div class="tab-content">
+
+            <div role="tabpanel" class="tab-pane fade{{ ' in active' if active_tab == 'twitter' else '' }} twisent-form" id="twitter">
+              <p class="lead">The following input types are accepted:</p>
+              <ul>
+                <li>@handle</li>
+                <li>#hashtag</li>
+                <li>Twitter URL</li>
+                <li>Status ID</li>
               </ul>
-            {% endif %}
+
+              <form action="{{ url_for('twitter') }}" method="post">
+                <div class="form-field">
+                  {{ twform.tw(size=60) }} {{ twform.submit }}
+                  {% if twform.tw.errors %}
+                    <ul class="errors">
+                      {% for error in twform.tw.errors %}
+                        <li>{{ error }}</li>
+                      {% endfor %}
+                    </ul>
+                  {% endif %}
+                </div>
+                {{ twform.csrf_token }}
+              </form>
+
+            </div>
+            <div role="tabpanel" class="tab-pane fade{{ ' in active' if active_tab == 'text' else '' }} twisent-form" id="text">
+              <p class="lead">Provide up to 280 characters:</p>
+
+              <form action="{{ url_for('text') }}" method="post">
+                <div class="form-field">
+                  {{ txform.tx(cols="70", rows="4")|safe }}
+                  {% if txform.tx.errors %}
+                    <ul class="errors">
+                      {% for error in txform.tx.errors %}
+                        <li>{{ error }}</li>
+                      {% endfor %}
+                    </ul>
+                  {% endif %}
+                </div>
+                <div class="form-field"><br/>{{ txform.submit }}</div>
+
+                {{ txform.csrf_token }}
+              </form>
+
+            </div>
           </div>
-          {{ form.csrf_token }}
-        </form>
+        </div>
+
+
 
       </div>
 
-      {% if data is not none %}
+      {% if data[0].text is not none or data[0].messages|length > 0 %}
+      <div class="twisent-results-container">
+        <p class="lead">Analysis Results</p>
+        Predicted sentiment for {{ data|length }} item{% if data|length > 1 %}s{% endif %}
+
+        {% for d in data %}
+        <div class="twisent-results">
+          <b>Text:</b>
+          <div>
+            {{ d.text }}
+          </div>
+          <br />
+          <table>
+            <tr><td class="twisent-label">Sentiment Prediction</td><td>{{ "POSITIVE" if d.pred == 1 else "NEGATIVE" }}</td></tr>
+            <tr><td class="twisent-label">Probability</td><td>{{ "%.05f"| format(d.proba|float) }}</td></tr>
+            {% if d.tweet is not none %}
+            <tr><td class="twisent-label" colspan="2"><br />Twitter Details:</td></tr>
+            <tr><td class="twisent-label">Time</td><td>{{ d.tweet.created_at }}</td></tr>
+            <tr><td class="twisent-label">User</td><td>@{{ d.tweet.user.screen_name }} ({{ d.tweet.user.name }})</td></tr>
+            <tr><td class="twisent-label">Hashtags</td><td>{% for hashtag in d.tweet.hashtags %}#{{ hashtag['text'] }} {% endfor %}</td></tr>
+            <tr><td class="twisent-label">Favorites</td><td>{{ d.tweet.favorite_count }}</td></tr>
+            <tr><td class="twisent-label">Retweets</td><td>{{ d.tweet.retweet_count }}</td></tr>
+            <tr><td class="twisent-label">Status ID</td><td>{{ d.tweet.id }}</td></tr>
+            {% endif %}
+          </table>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+
+      {% if data[0].text is not none  or data[0].messages|length > 0 %}
+      <div class="twisent-preformatted-results">
+      {% for d in data %}
       <div>
         <div>
           <h3>Analysis Results</h3>
         </div>
-        <pre>
-          msg: {{ data.msg }}
-          data: {{ data }}
-        </pre>
+        <pre>{% if d.text is not none %}
+Sentiment Prediction : {{ "POSITIVE" if d.pred == 1 else "NEGATIVE" }}
+Probability          : {{ "%.5f"| format(d.proba|float) }}
+
+Text...
+{{ d.text }}
+{% if d.tweet is not none %}
+Timestamp      : {{ d.tweet.created_at }}
+Handle         : @{{ d.tweet.user.screen_name }} ({{ d.tweet.user.name }})
+Status ID      : {{ d.tweet.id }}
+Hashtags       : {% for hashtag in d.tweet.hashtags %}#{{ hashtag['text'] }} {% endfor %}
+Favorite Count : {{ d.tweet.favorite_count }}
+Retweet Count  : {{ d.tweet.retweet_count }}
+{% endif %}{% endif %}{% if d.messages|length > 0 %}
+Messages ({{ d.messages|length }}):
+{% for m in d.messages %}{{ m }}
+{% endfor %}{% endif %}</pre>
+      </div>
+      {% endfor %}
       </div>
       {% endif %}
 

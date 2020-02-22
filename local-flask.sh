@@ -1,5 +1,7 @@
 #!/bin/sh
 
+. instance/twisent_config_secret.sh
+
 export DISPLAY_APP_NAME="Hedge Court - TwiSent (DEV)"
 export PICKLE_PATH="pickle/twisent_trained_model.pkl"
 export FLASK_APP=application.py

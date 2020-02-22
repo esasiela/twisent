@@ -19,7 +19,7 @@ if __name__ == "__main__":
     print_stamp("Reading complete.", t)
 
     retrainWhole = True
-    truncateRows = 100000
+    truncateRows = 0
 
     if truncateRows > 0:
         # grab the first bunch of rows, then grab another bunch starting at 800000
