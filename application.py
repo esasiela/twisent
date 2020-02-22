@@ -106,8 +106,9 @@ def welcome():
 
 @app.route('/text', methods=['POST'])
 def text():
-    if not auth_user_verify(request):
-        return unauthorized_response(request)
+    # no need to verify auth, allowing anonymous text prediction
+    #if not auth_user_verify(request):
+    #    return unauthorized_response(request)
 
     theme = app.config['THEME']
 
@@ -237,7 +238,8 @@ def pickle():
                            data=[d],
                            active_tab="twitter",
                            ip_blocked=None,
-                           username=cookie_username(request))
+                           username=cookie_username(request),
+                           pickle=True)
 
 
 @app.route('/login', methods=['GET', 'POST'])

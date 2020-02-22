@@ -24,8 +24,8 @@
     <div class="container">
       <div class="header">
         <ul class="nav nav-pills pull-right">
-          <li class="active"><a href="/">Home</a></li>
-          <li><a href="{{ url_for('pickle') }}">Pickle</a></li>
+          <li class="{% if not pickle %}active{% endif %}"><a href="/">Home</a></li>
+          <li class="{% if pickle %}active{% endif %}"><a href="{{ url_for('pickle') }}">Pickle</a></li>
           <li><a href="{{ url_for('login') }}">{% if username is not none %}({{ username }})</small>{% else %}Login{% endif %}</a></li>
           <!--
           <li><a href="#">Blog</a></li>
@@ -57,6 +57,7 @@
         <h1>Sentiment Analysis</h1>
 
         <div role="tabpanel">
+          <div class="twisent-tab-shrinker">
           <ul class="nav nav-tabs" role="tablist">
             <li role="presentation" class="{{ 'active' if active_tab == 'twitter' }}">
               <a href="#twitter" ari-controls="twitter" role="tab" data-toggle="tab">Twitter</a>
@@ -65,6 +66,7 @@
               <a href="#text" ari-controls="text" role="tab" data-toggle="tab">Text</a>
             </li>
           </ul>
+          </div>
 
           <div class="tab-content">
 
