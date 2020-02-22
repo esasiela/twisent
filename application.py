@@ -36,20 +36,46 @@ class TextForm(FlaskForm):
     submit = SubmitField("Predict Sentiment")
 
 
+def ip_whitelist_verify(request):
+    remote_addr = request.environ.get("HTTP_X_REAL_IP", request.remote_addr)
+    white_list = os.environ.get("IP_WHITELIST")
+    retval = request.environ.get("HTTP_X_REAL_IP", request.remote_addr) in \
+             os.environ.get("IP_WHITELIST").replace(" ", "").split(",")
+    if not retval:
+        print("Blocking IP:", remote_addr, "WHITELIST:", white_list, "returning:", retval, file=sys.stderr)
+    return retval
+
+
+def ip_whitelist_response(request):
+    return render_template('index.html', theme=app.config['THEME'], flask_debug=app.debug,
+                           twform=TwitterForm(),
+                           txform=TextForm(),
+                           data=[TwisentData()],
+                           active_tab="twitter",
+                           ip_blocked=request.environ.get("HTTP_X_REAL_IP", request.remote_addr))
+
+
 @app.route('/')
 def welcome():
+    if not ip_whitelist_verify(request):
+        return ip_whitelist_response(request)
+
     theme = app.config['THEME']
-    # d = TwisentData()
-    # d.msg = "working directory: " + os.getcwd() + "\n" + str(os.listdir(os.getcwd()))
+    remote_ip = request.environ.get("HTTP_X_REAL_IP", request.remote_addr)
+    print("Remote IP", remote_ip, file=sys.stderr)
     return render_template('index.html', theme=theme, flask_debug=app.debug,
                            twform=TwitterForm(),
                            txform=TextForm(),
                            data=[TwisentData()],
-                           active_tab="twitter")
+                           active_tab="twitter",
+                           ip_blocked=None)
 
 
 @app.route('/text', methods=['POST'])
 def text():
+    if not ip_whitelist_verify(request):
+        return ip_whitelist_response(request)
+
     theme = app.config['THEME']
 
     form = TextForm()
@@ -64,17 +90,22 @@ def text():
                                twform=TwitterForm(),
                                txform=form,
                                data=[d],
-                               active_tab="text")
+                               active_tab="text",
+                               ip_blocked=None)
     else:
         return render_template('index.html', theme=theme, flask_debug=app.debug,
                                twform=TwitterForm(),
                                txform=form,
                                d=[TwisentData()],
-                               active_tab="text")
+                               active_tab="text",
+                               ip_blocked=None)
 
 
 @app.route('/twitter', methods=['POST'])
 def twitter():
+    if not ip_whitelist_verify(request):
+        return ip_whitelist_response(request)
+
     theme = app.config['THEME']
 
     form = TwitterForm()
@@ -84,13 +115,45 @@ def twitter():
         t = form.tw.data
         ta = TwitterAccessor()
 
+        # first, look at t to see if it is a URL that we can do something with:
+        # hashtag https://twitter.com/hashtag/Arduino?src=hashtag_click
+        # user    https://twitter.com/arduino
+        # tweet   https://twitter.com/arduino/status/1225785143501230082
+        url_hashtag_prefix = "https://twitter.com/hashtag/"
+        url_status_delim = "/status/"
+        url_username_prefix = "https://twitter.com/"
+        if t.startswith(url_hashtag_prefix):
+            # kill the prefix, split on ? and keep the left half
+            print("URL Search, hashtag", t, file=sys.stderr)
+            t = "#" + t.replace(url_hashtag_prefix, "").split("?")[0]
+            form.tw.data = t
+        elif url_status_delim in t:
+            # split by /status/, grab the right half, split that by ? and grab the left half
+            # more fun this way than a regex
+            # TODO check that status id is purely numeric, or just let it fail because this URL paste is kinda get-what-you-get
+            print("URL Search, status", t, file=sys.stderr)
+            t = t.split(url_status_delim)[1].split("?")[0]
+            form.tw.data = t
+        elif t.startswith(url_username_prefix) and "/" not in t.replace(url_username_prefix, ""):
+            # all we have is a single path element on the URL, that is the username
+            # kill the prefix, split by ? and keep the left half
+            print("URL Search, user", t, file=sys.stderr)
+            t = "@" + t.replace(url_username_prefix, "").split("?")[0]
+            form.tw.data = t
+
         if t.startswith('@'):
-            input_mode = "@handle"
-            ta.get_tweets_by_handle(form.tw.data)
+            # print("Twitter search, mode=@username", t, file=sys.stderr)
+            input_mode = "@username"
+            ta.get_tweets_by_username(t)
+        elif t.startswith('#'):
+            # print("Twitter search, mode=#hashtag", t, file=sys.stderr)
+            input_mode = "#hashtag"
+            ta.get_tweets_by_hashtag(t)
         else:
+            # print("Twitter search, mode=status_id", t, file=sys.stderr)
             input_mode = "status_id"
             # assume text is pure numeric, i.e. a status id
-            status_id = int(form.tw.data)
+            status_id = int(t)
             ta.get_tweet_by_id(status_id)
             # TODO error handling (Api fails, no tweet found, etc)
 
@@ -110,17 +173,22 @@ def twitter():
                                twform=form,
                                txform=TextForm(),
                                data=data_list,
-                               active_tab="twitter")
+                               active_tab="twitter",
+                               ip_blocked=None)
     else:
         return render_template('index.html', theme=theme, flask_debug=app.debug,
                                twform=form,
                                txform=TextForm,
                                data=[TwisentData()],
-                               active_tab="twitter")
+                               active_tab="twitter",
+                               ip_blocked=None)
 
 
 @app.route('/pickle', methods=['GET'])
 def pickle():
+    if not ip_whitelist_verify(request):
+        return ip_whitelist_response(request)
+
     theme = app.config['THEME']
     d = TwisentData()
     for k, v in meta_model.items():
@@ -130,7 +198,8 @@ def pickle():
                            twform=TwitterForm(),
                            txform=TextForm(),
                            data=[d],
-                           active_tab="twitter")
+                           active_tab="twitter",
+                           ip_blocked=None)
 
 
 if __name__ == '__main__':

@@ -40,6 +40,12 @@
       </div>
       {% endif %}
 
+      {% if ip_blocked is not none %}
+      <div class="alert alert-danger">
+        Your IP Address ({{ ip_blocked }}) is not on the whitelist.  You may look but not touch.
+      </div>
+      {% endif %}
+
       <div>
         <h1>Sentiment Analysis</h1>
 
@@ -58,7 +64,7 @@
             <div role="tabpanel" class="tab-pane fade{{ ' in active' if active_tab == 'twitter' else '' }} twisent-form" id="twitter">
               <p class="lead">The following input types are accepted:</p>
               <ul>
-                <li>@handle</li>
+                <li>@username</li>
                 <li>#hashtag</li>
                 <li>Twitter URL</li>
                 <li>Status ID</li>
@@ -66,7 +72,7 @@
 
               <form action="{{ url_for('twitter') }}" method="post">
                 <div class="form-field">
-                  {{ twform.tw(size=60) }} {{ twform.submit }}
+                  {{ twform.tw(size=60) }} {% if ip_blocked is none %}{{ twform.submit }}{% endif %}
                   {% if twform.tw.errors %}
                     <ul class="errors">
                       {% for error in twform.tw.errors %}
@@ -93,7 +99,7 @@
                     </ul>
                   {% endif %}
                 </div>
-                <div class="form-field"><br/>{{ txform.submit }}</div>
+                {% if ip_blocked is none %}<div class="form-field"><br/>{{ txform.submit }}</div>{% endif %}
 
                 {{ txform.csrf_token }}
               </form>
