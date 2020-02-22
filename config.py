@@ -6,6 +6,7 @@ DISPLAY_APP_NAME = "CHANGE_ME Hedge Court - TwiSent"
 PICKLE_PATH = "override me in env var"
 
 IP_WHITELIST = "override me in env var"
+MAGIC_WORD = "override me in env var"
 
 TWITTER_CONSUMER_KEY = "override me in env var"
 TWITTER_CONSUMER_SECRET = "override me in env var"

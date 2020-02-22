@@ -26,6 +26,7 @@
         <ul class="nav nav-pills pull-right">
           <li class="active"><a href="/">Home</a></li>
           <li><a href="{{ url_for('pickle') }}">Pickle</a></li>
+          <li><a href="{{ url_for('login') }}">{% if username is not none %}({{ username }})</small>{% else %}Login{% endif %}</a></li>
           <!--
           <li><a href="#">Blog</a></li>
           <li><a href="#">Press</a></li>
@@ -43,6 +44,12 @@
       {% if ip_blocked is not none %}
       <div class="alert alert-danger">
         Your IP Address ({{ ip_blocked }}) is not on the whitelist.  You may look but not touch.
+      </div>
+      {% endif %}
+
+      {% if username is none %}
+      <div class="alert alert-danger">
+        Twitter access requires authorization.  Unauthorized users may use text sentiment prediction only.
       </div>
       {% endif %}
 
@@ -72,7 +79,7 @@
 
               <form action="{{ url_for('twitter') }}" method="post">
                 <div class="form-field">
-                  {{ twform.tw(size=60) }} {% if ip_blocked is none %}{{ twform.submit }}{% endif %}
+                  {{ twform.tw(size=60) }} {% if ip_blocked is none or username is not none %}{{ twform.submit }}{% endif %}
                   {% if twform.tw.errors %}
                     <ul class="errors">
                       {% for error in twform.tw.errors %}

@@ -2,9 +2,10 @@ import os
 import sys
 import json
 
-from flask import Flask, request, Response, render_template, redirect, url_for
+from flask import Flask, request, Response, render_template, redirect, url_for, make_response
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, TextAreaField
+from wtforms.fields import PasswordField
 from wtforms.validators import InputRequired, Length
 
 # needed for the model
@@ -36,6 +37,12 @@ class TextForm(FlaskForm):
     submit = SubmitField("Predict Sentiment")
 
 
+class LoginForm(FlaskForm):
+    username = StringField("Username", validators=[InputRequired()])
+    password = PasswordField("Password", validators=[InputRequired()])
+    submit = SubmitField("Login")
+
+
 def ip_whitelist_verify(request):
     remote_addr = request.environ.get("HTTP_X_REAL_IP", request.remote_addr)
     white_list = os.environ.get("IP_WHITELIST")
@@ -52,13 +59,38 @@ def ip_whitelist_response(request):
                            txform=TextForm(),
                            data=[TwisentData()],
                            active_tab="twitter",
-                           ip_blocked=request.environ.get("HTTP_X_REAL_IP", request.remote_addr))
+                           ip_blocked=request.environ.get("HTTP_X_REAL_IP", request.remote_addr),
+                           username=None)
+
+
+def auth_user_verify(request):
+    return cookie_username(request) is not None
+
+
+def unauthorized_response(request):
+    return render_template('index.html', theme=app.config['THEME'], flask_debug=app.debug,
+                           twform=TwitterForm(),
+                           txform=TextForm(),
+                           data=[TwisentData()],
+                           active_tab="text",
+                           ip_blocked=None,
+                           username=None)
+
+
+def cookie_username(request):
+    c = request.cookies.get("magic")
+    if c is not None:
+        u, p = c.split(":")
+        if p == os.environ.get("MAGIC_WORD"):
+            return u
+    else:
+        return None
 
 
 @app.route('/')
 def welcome():
-    if not ip_whitelist_verify(request):
-        return ip_whitelist_response(request)
+    if not auth_user_verify(request):
+        return unauthorized_response(request)
 
     theme = app.config['THEME']
     remote_ip = request.environ.get("HTTP_X_REAL_IP", request.remote_addr)
@@ -68,13 +100,14 @@ def welcome():
                            txform=TextForm(),
                            data=[TwisentData()],
                            active_tab="twitter",
-                           ip_blocked=None)
+                           ip_blocked=None,
+                           username=cookie_username(request))
 
 
 @app.route('/text', methods=['POST'])
 def text():
-    if not ip_whitelist_verify(request):
-        return ip_whitelist_response(request)
+    if not auth_user_verify(request):
+        return unauthorized_response(request)
 
     theme = app.config['THEME']
 
@@ -91,20 +124,22 @@ def text():
                                txform=form,
                                data=[d],
                                active_tab="text",
-                               ip_blocked=None)
+                               ip_blocked=None,
+                               username=cookie_username(request))
     else:
         return render_template('index.html', theme=theme, flask_debug=app.debug,
                                twform=TwitterForm(),
                                txform=form,
                                d=[TwisentData()],
                                active_tab="text",
-                               ip_blocked=None)
+                               ip_blocked=None,
+                               username=cookie_username(request))
 
 
 @app.route('/twitter', methods=['POST'])
 def twitter():
-    if not ip_whitelist_verify(request):
-        return ip_whitelist_response(request)
+    if not auth_user_verify(request):
+        return unauthorized_response(request)
 
     theme = app.config['THEME']
 
@@ -174,20 +209,22 @@ def twitter():
                                txform=TextForm(),
                                data=data_list,
                                active_tab="twitter",
-                               ip_blocked=None)
+                               ip_blocked=None,
+                               username=cookie_username(request))
     else:
         return render_template('index.html', theme=theme, flask_debug=app.debug,
                                twform=form,
                                txform=TextForm,
                                data=[TwisentData()],
                                active_tab="twitter",
-                               ip_blocked=None)
+                               ip_blocked=None,
+                               username=cookie_username(request))
 
 
 @app.route('/pickle', methods=['GET'])
 def pickle():
-    if not ip_whitelist_verify(request):
-        return ip_whitelist_response(request)
+    if not auth_user_verify(request):
+        return unauthorized_response(request)
 
     theme = app.config['THEME']
     d = TwisentData()
@@ -199,7 +236,34 @@ def pickle():
                            txform=TextForm(),
                            data=[d],
                            active_tab="twitter",
-                           ip_blocked=None)
+                           ip_blocked=None,
+                           username=cookie_username(request))
+
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    form = LoginForm()
+
+    if form.validate_on_submit():
+        if form.password.data == os.environ.get("MAGIC_WORD"):
+            res = make_response(
+                render_template('login.html', theme=app.config['THEME'], flask_debug=app.debug,
+                                form=form, msg="Successful Login", username=form.username.data)
+            )
+            res.set_cookie("magic", str(form.username.data) + ":" + str(form.password.data),
+                           max_age=(60 * 60 * 24 * 365 * 2))
+            return res
+        else:
+            # they submittited a bad password
+            res = make_response(
+                render_template('login.html', theme=app.config['THEME'], flask_debug=app.debug,
+                                form=form, msg="Invalid Password", username=None)
+            )
+            res.set_cookie("magic", "failure:failure", max_age=0)
+            return res
+    else:
+        return render_template('login.html', theme=app.config['THEME'], flask_debug=app.debug,
+                               form=form, msg=None, username=cookie_username(request))
 
 
 if __name__ == '__main__':
