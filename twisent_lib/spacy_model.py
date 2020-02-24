@@ -10,7 +10,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, precision_score, recall_score, roc_auc_score
 
-from twisent_lib import print_stamp, spacy_tokenizer, predictors
+from twisent_lib import print_stamp, twisent_tokenizer, CleanTextTransformer
 
 
 if __name__ == "__main__":
@@ -19,7 +19,7 @@ if __name__ == "__main__":
     print_stamp("Reading complete.", t)
 
     retrainWhole = True
-    truncateRows = 0
+    truncateRows = 50000
 
     if truncateRows > 0:
         # grab the first bunch of rows, then grab another bunch starting at 800000
@@ -60,18 +60,18 @@ if __name__ == "__main__":
     #nlp = spacy.load('en')
     nlp = spacy.load('en_core_web_sm')
 
-    bow_vector = CountVectorizer(tokenizer=spacy_tokenizer, ngram_range=(1, 1), encoding="latin-1")
+    bow_vector = CountVectorizer(tokenizer=twisent_tokenizer, ngram_range=(1, 1), encoding="latin-1")
     #tfidf_vector = TfidfVectorizer(tokenizer=spacy_tokenizer)
 
-    classifier = LogisticRegression(
+    model = LogisticRegression(
         max_iter=5000,
         solver="sag"
     )
 
     pipe = Pipeline([
-        ("cleaner", predictors()),
+        ("cleaner", CleanTextTransformer()),
         ("vectorizer", bow_vector),
-        ("classifier", classifier),
+        ("classifier", model),
     ])
 
     t = print_stamp("Training model...")
@@ -104,7 +104,8 @@ if __name__ == "__main__":
             'train_date': datetime.now(),
             'git_commit': '88959a6eb55c57db5a8ffa1e688bb8840c64a7f5',
         }
-        pickle_path = "pickle/twisent_trained_model.pkl"
+
+        pickle_path = "pickle/twisent_trained_model" + datetime.now().strftime("%Y%m%d_%H%M%S") + ".pkl"
         with open(pickle_path, "wb") as f:
             pickle.dump(meta_pickle, f)
         print_stamp("Pickle complete.", t)

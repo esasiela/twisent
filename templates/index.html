@@ -81,7 +81,7 @@
 
               <form action="{{ url_for('twitter') }}" method="post">
                 <div class="form-field">
-                  {{ twform.tw(size=60) }} {% if ip_blocked is none or username is not none %}{{ twform.submit }}{% endif %}
+                  {{ twform.tw(size=60) }} {% if username is not none %}{{ twform.submit }}{% endif %}
                   {% if twform.tw.errors %}
                     <ul class="errors">
                       {% for error in twform.tw.errors %}
@@ -128,15 +128,28 @@
 
         {% for d in data %}
         <div class="twisent-results">
+          {% if pickle %}
+<pre>{% for m in d.messages %}{{ m }}
+{% endfor %}</pre>
+          {% else %}
+          <table>
+            <tr><td class="twisent-label">Sentiment Prediction</td><td>{{ "POSITIVE" if d.pred == 1 else "NEGATIVE" }}</td></tr>
+            <tr><td class="twisent-label">Probability</td><td>{{ "%.05f"| format(d.proba|float) }}</td></tr>
+          </table>
+          <br />
+
           <b>Text:</b>
           <div>
             {{ d.text }}
           </div>
           <br />
+          <b>Keyword Tokens:</b>
+          <div>
+            {{ d.get_spacy_text() }}
+          </div>
+
+          {% if d.tweet is not none %}
           <table>
-            <tr><td class="twisent-label">Sentiment Prediction</td><td>{{ "POSITIVE" if d.pred == 1 else "NEGATIVE" }}</td></tr>
-            <tr><td class="twisent-label">Probability</td><td>{{ "%.05f"| format(d.proba|float) }}</td></tr>
-            {% if d.tweet is not none %}
             <tr><td class="twisent-label" colspan="2"><br />Twitter Details:</td></tr>
             <tr><td class="twisent-label">Time</td><td>{{ d.tweet.created_at }}</td></tr>
             <tr><td class="twisent-label">User</td><td>@{{ d.tweet.user.screen_name }} ({{ d.tweet.user.name }})</td></tr>
@@ -144,8 +157,10 @@
             <tr><td class="twisent-label">Favorites</td><td>{{ d.tweet.favorite_count }}</td></tr>
             <tr><td class="twisent-label">Retweets</td><td>{{ d.tweet.retweet_count }}</td></tr>
             <tr><td class="twisent-label">Status ID</td><td>{{ d.tweet.id }}</td></tr>
-            {% endif %}
           </table>
+          {% endif %}
+
+          {% endif %}
         </div>
         {% endfor %}
       </div>

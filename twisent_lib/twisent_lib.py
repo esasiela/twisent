@@ -33,8 +33,13 @@ class TwisentData:
         self.pred = -1
         self.proba = -1
 
+    def get_spacy_text(self):
+        return twisent_tokenizer(self.text)
+
 
 class TwitterAccessor:
+    COUNT_THROTTLE = 10
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.tweets = []
@@ -52,14 +57,14 @@ class TwitterAccessor:
 
     def get_tweets_by_username(self, username):
         # TODO error handling if Api call fails
-        self.tweets = self.api.GetUserTimeline(screen_name=username, count=5)
+        self.tweets = self.api.GetUserTimeline(screen_name=username, count=TwitterAccessor.COUNT_THROTTLE)
 
     def get_tweets_by_hashtag(self, hashtag: str):
         hashtag = hashtag.split()[0]
         query_string = urlencode({'q': str("(" + hashtag + ")")})
         # Twitter API returns stuff without the hashtag, so filter only relevants
         # TODO error handling if Api call fails
-        search_result = self.api.GetSearch(raw_query=query_string, count=5)
+        search_result = self.api.GetSearch(raw_query=query_string, count=TwitterAccessor.COUNT_THROTTLE)
         for tweet in search_result:
             # hashtags is a list, each element has a 'text' attribute
             for h in tweet.hashtags:
@@ -68,24 +73,66 @@ class TwitterAccessor:
                     break
 
 
-def spacy_tokenizer(sentence, parser=English(), stop_words=spacy.lang.en.stop_words.STOP_WORDS,
-                    punctuations=string.punctuation):
-    mytokens = parser(sentence)
+def twisent_tokenizer(sentence, parser=English(), stop_words=spacy.lang.en.stop_words.STOP_WORDS,
+                      punctuation=string.punctuation):
+    """
+    Breaks the sentence into tokens and applies the following preprocessing:
+    1) strip whitespace
+    2) lower case
+    3) lemmatize
+    4) run preprocess_token to really dig in and clean it up
 
-    # lemmatize each token and convert tolower
-    mytokens = [word.lemma_.lower().strip() if word.lemma_ != "-PRON-" else word.lower_ for word in mytokens]
+    :param sentence: the input string to be tokenized
+    :param parser: the language parser (default=spacy.English())
+    :param stop_words: list of str
+    :param punctuation: str containing all punctuation marks
+    :return: list of str tokens
+    """
+    tokens = parser(sentence)
 
-    # remove stopwords
-    mytokens = [word for word in mytokens if word not in stop_words and word not in punctuations]
+    # strip, lower, lemmatize each token
+    tokens = [word.lemma_.lower().strip() for word in tokens]
 
-    return mytokens
+    # clean the lemma up
+    tokens = [preprocess_token(word, stop_words, punctuation) for word in tokens]
+
+    # remove blanks
+    return [word for word in tokens if word != ""]
+
+
+def preprocess_token(t: str, stop_words=spacy.lang.en.stop_words.STOP_WORDS, punctuation=string.punctuation):
+    """
+    Processes the token.  Assumes it has been lowered, stripped, and lemmatized.
+    Removes the following:
+    1) begins with @ (username mentions)
+    2) punctuation
+    3) stop words
+    4) begins with http (urls)
+    5) 'rt' (all retweets begin with this token, just adds noise)
+    :param t: the token to parse
+    :param stop_words: stop words to remove
+    :param punctuation: punctuation to remove
+    :return: str, the final token
+    """
+    # remove 'begins with @'
+    if t.startswith('@'):
+        return ""
+
+    # remove punctuation
+    t = t.translate(str.maketrans('', '', punctuation))
+
+    # remove stop words, ^http, ^rt$
+    if t in stop_words or t.startswith("http") or t == "rt":
+        return ""
+
+    return t
 
 
 def clean_text(text):
     return text.strip().lower()
 
 
-class predictors(TransformerMixin):
+class CleanTextTransformer(TransformerMixin):
     def transform(self, X, **transform_params):
         return [clean_text(text) for text in X]
 
