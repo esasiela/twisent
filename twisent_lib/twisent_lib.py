@@ -45,16 +45,17 @@ class TwisentData:
         """
         if self.tweet is not None:
             my_tweet = self.tweet
+            hashtag_text = ""
+            for h in self.tweet.hashtags:
+                hashtag_text += " #" + h.text
         else:
             my_tweet = Status()
             my_tweet.user = User()
             my_tweet.created_at = datetime.now()
+            hashtag_text = ""
 
-        keyword_text = ":".join(self.get_spacy_text())
-        hashtag_text = "todo"
-        pos_proba = self.proba if self.pred == 1 else 1 - self.proba
         d = {
-            "pos proba": [pos_proba],
+            "pos proba": [self.proba if self.pred == 1 else 1 - self.proba],
             "time": [my_tweet.created_at],
             "status_id": [my_tweet.id],
             "screen_name": [my_tweet.user.screen_name],
@@ -63,7 +64,7 @@ class TwisentData:
             "favorite_count": [my_tweet.favorite_count],
             "retweet_count": [my_tweet.retweet_count],
             "text": [self.text],
-            "keywords": [keyword_text]
+            "keywords": [":".join(self.get_spacy_text())]
         }
         return pd.DataFrame(d)
 

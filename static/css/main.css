@@ -92,3 +92,11 @@
     border-radius: 4px;
 }
 
+.twisent-csv-individual {
+    display: none;
+}
+
+.twisent-csv-button {
+    text-align: right;
+    padding: 10px;
+}

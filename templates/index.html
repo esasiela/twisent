@@ -121,6 +121,26 @@
 
       </div>
 
+{% if display.pickle or display.data|length > 0 %}
+<br/>
+<div role="tabpanel">
+    <div class="twisent-tab-shrinker">
+        <ul class="nav nav-tabs" role="tablist">
+            <li role="presentation" class="active' }}">
+                <a href="#pretty" ari-controls="pretty" role="tab" data-toggle="tab">Pretty</a>
+            </li>
+            <li role="presentation">
+                <a href="#csv" ari-controls="csv" role="tab" data-toggle="tab">CSV</a>
+            </li>
+        </ul>
+    </div>
+
+    <div class="tab-content">
+        <div role="tabpanel" class="tab-pane fade in active twisent-form" id="pretty">
+
+
+
+
         {% if display.pickle %}
         <div class="twisent-results-container">
             <p class="lead">Details of Prediction Model</p>
@@ -202,10 +222,13 @@
           </table>
 
           {% endif %}
-            <br/>
-            <B>CSV Data:</B>
+            <div class="twisent-csv-individual">
+                <B>CSV Data:</B>
 <pre>{{ d.get_csv_string() }}</pre>
+            </div>
+
         </div>
+
         {% endfor %}
       </div>
       {% endif %}
@@ -240,6 +263,18 @@ Messages ({{ d.messages|length }}):
       </div>
       {% endif %}
 
+        </div>
+        <div role="tabpanel" class="tab-pane fade twisent-form" id="csv">
+            <div class="twisent-csv-button">
+                <button id="csv-copy">Copy to Clipboard</button>
+            </div>
+<pre id="csv-container">{{ display.get_csv_string() }}</pre>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+
       <div class="footer">
         <p>&copy; Hedge Court 2020</p>
       </div>
@@ -249,27 +284,24 @@ Messages ({{ d.messages|length }}):
     <script src="{{ url_for('static', filename='jquery/jquery.js') }}"></script>
     <script src="{{ url_for('static', filename='bootstrap/js/bootstrap.min.js') }}"></script>
     <script type="text/javascript">
-    $(document).ready(function() {
-      $("#signup").click(function() {
-        $.post( "/signup", $("#signupForm").serialize(),
-                function(data) {
-                  $("#signupSuccess").show();
-                }
-              )
-              .error(function(xhr) {
-                switch(xhr.status) {
-                  case 409:
-                    $("#signupDuplicate").show();
-                    break;
-                  default:
-                    $("#signupError").show();
-                }
-              })
-              .always(function() {
-                $("#signupModal").modal('hide');
-              });
-      })
-    })
+$(document).ready(function() {
+    $("#csv-copy").click(function() {
+        copyToClipboard("#csv-container");
+    });
+
+    function copyToClipboard(element) {
+        /*
+        var $temp = $("<input>");
+        $("body").append($temp);
+        $temp.val($(element).text()).select();
+        document.execCommand("copy");
+        $temp.remove();
+        */
+        element = $('<textarea>').appendTo('body').val($(element).text()).select()
+        document.execCommand('copy')
+        element.remove()
+    }
+})
     </script>
   </body>
 </html>

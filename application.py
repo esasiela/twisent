@@ -136,6 +136,23 @@ class TwisentDisplay:
         else:
             return sum(d.proba for d in self.data if d.pred == label) / self.get_count_by_label(label)
 
+    def get_csv_string(self):
+        """
+        Returns a csv representation of all search results
+        :return:
+        """
+        df = None
+        for d in self.data:
+            if df is None:
+                df = d.as_dataframe()
+            else:
+                df = df.append(d.as_dataframe())
+
+        if df is None:
+            return ""
+        else:
+            return df.to_csv(index=False)
+
 
 @app.route('/')
 def welcome():
