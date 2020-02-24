@@ -8,8 +8,7 @@ chardet==3.0.4
 Click==7.0
 coala-utils==0.5.1
 cymem==2.0.3
-# "pip freeze" puts this in here, but this is a separate step for spacy after pip
-# en-core-web-sm==2.2.5
+en-core-web-sm==2.2.5
 Flask==1.1.1
 Flask-WTF==0.14.3
 future==0.18.2
@@ -44,4 +43,5 @@ urllib3==1.25.8
 wasabi==0.6.0
 Werkzeug==1.0.0
 WTForms==2.2.1
+xgboost==1.0.1
 zipp==3.0.0

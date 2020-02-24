@@ -7,8 +7,10 @@ import spacy
 import pandas as pd
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.pipeline import Pipeline
-from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, precision_score, recall_score, roc_auc_score
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
+import xgboost as xgb
 
 from twisent_lib import print_stamp, twisent_tokenizer, CleanTextTransformer
 
@@ -19,7 +21,7 @@ if __name__ == "__main__":
     print_stamp("Reading complete.", t)
 
     retrainWhole = True
-    truncateRows = 50000
+    truncateRows = 0
 
     if truncateRows > 0:
         # grab the first bunch of rows, then grab another bunch starting at 800000
@@ -63,10 +65,27 @@ if __name__ == "__main__":
     bow_vector = CountVectorizer(tokenizer=twisent_tokenizer, ngram_range=(1, 1), encoding="latin-1")
     #tfidf_vector = TfidfVectorizer(tokenizer=spacy_tokenizer)
 
-    model = LogisticRegression(
+    model_lr = LogisticRegression(
         max_iter=5000,
         solver="sag"
     )
+
+    model_xgb = xgb.XGBClassifier(
+        objective="binary:logistic",
+        eta=0.3,
+        subsample=0.9,
+        colsample_bytree=0.9,
+        max_depth=5,
+        reg_alpha=1.5,
+        min_child_weight=1.0,
+    )
+
+    model_rf = RandomForestClassifier(
+        n_estimators=250,
+        max_depth=6,
+    )
+
+    model = model_xgb
 
     pipe = Pipeline([
         ("cleaner", CleanTextTransformer()),
@@ -79,8 +98,13 @@ if __name__ == "__main__":
     print_stamp("Training complete.", t)
     print("")
     t = print_stamp("Predicting...")
+    #y_pred = pipe.predict(X_test)
     y_pred = pipe.predict(X_test)
     print_stamp("Predicting complete.", t)
+
+    print("")
+    print("y_pred shape", y_pred.shape)
+    print("y_test shape", y_test.shape)
 
     print("")
     print("Metrics:")
@@ -102,7 +126,7 @@ if __name__ == "__main__":
             'pipeline': pipe,
             'num_train_rows': full_df.shape[0],
             'train_date': datetime.now(),
-            'git_commit': '88959a6eb55c57db5a8ffa1e688bb8840c64a7f5',
+            'git_commit': '47f3d4e77d8b7eb0d78fa6297d12bbbbc12a19a6',
         }
 
         pickle_path = "pickle/twisent_trained_model" + datetime.now().strftime("%Y%m%d_%H%M%S") + ".pkl"

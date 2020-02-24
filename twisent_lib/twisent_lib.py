@@ -1,10 +1,12 @@
 import os
 from datetime import datetime
+import pandas as pd
 from spacy.lang.en import English
 import spacy
 import string
 from sklearn.base import TransformerMixin
 from twitter import Api
+from twitter.models import Status, User
 from urllib3.request import urlencode
 
 
@@ -35,6 +37,55 @@ class TwisentData:
 
     def get_spacy_text(self):
         return twisent_tokenizer(self.text)
+
+    def as_dataframe(self):
+        """
+        returns a one-row dataframe with this objects data in it.
+        :return: dataframe
+        """
+        if self.tweet is not None:
+            my_tweet = self.tweet
+        else:
+            my_tweet = Status()
+            my_tweet.user = User()
+            my_tweet.created_at = datetime.now()
+
+        keyword_text = ":".join(self.get_spacy_text())
+        hashtag_text = "todo"
+        pos_proba = self.proba if self.pred == 1 else 1 - self.proba
+        d = {
+            "pos proba": [pos_proba],
+            "time": [my_tweet.created_at],
+            "status_id": [my_tweet.id],
+            "screen_name": [my_tweet.user.screen_name],
+            "user_name": [my_tweet.user.name],
+            "hashtags": [hashtag_text],
+            "favorite_count": [my_tweet.favorite_count],
+            "retweet_count": [my_tweet.retweet_count],
+            "text": [self.text],
+            "keywords": [keyword_text]
+        }
+        return pd.DataFrame(d)
+
+    def get_csv_string(self):
+        """
+        returns a csv-escaped string with the following fields.  If text mode (i.e. not a tweet) then all
+        twitter-specific fields will be emptystring.
+
+        pos-proba
+        time
+        status id
+        user handle
+        user screen name
+        hashtags (delimit with #)
+        favorite count
+        retweet count
+        raw text (csv escaped)
+        keywords (delimit with #)
+
+        :return: csv-escaped string
+        """
+        return self.as_dataframe().to_csv(index=False)
 
 
 class TwitterAccessor:
@@ -69,6 +120,7 @@ class TwitterAccessor:
             # hashtags is a list, each element has a 'text' attribute
             for h in tweet.hashtags:
                 if hashtag.lower() == str("#" + h.text.lower()):
+                    # only keep tweets that actually have this hashtag, Twitter API sometimes sends others
                     self.tweets.append(tweet)
                     break
 

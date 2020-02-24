@@ -24,9 +24,9 @@
     <div class="container">
       <div class="header">
         <ul class="nav nav-pills pull-right">
-          <li class="{% if not pickle %}active{% endif %}"><a href="/">Home</a></li>
-          <li class="{% if pickle %}active{% endif %}"><a href="{{ url_for('pickle') }}">Pickle</a></li>
-          <li><a href="{{ url_for('login') }}">{% if username is not none %}({{ username }})</small>{% else %}Login{% endif %}</a></li>
+          <li class="{% if not display.pickle %}active{% endif %}"><a href="/">Home</a></li>
+          <li class="{% if display.pickle %}active{% endif %}"><a href="{{ url_for('pickle') }}">Pickle</a></li>
+          <li><a href="{{ url_for('login') }}">{% if username is not none %}({{ display.username }})</small>{% else %}Login{% endif %}</a></li>
           <!--
           <li><a href="#">Blog</a></li>
           <li><a href="#">Press</a></li>
@@ -41,13 +41,13 @@
       </div>
       {% endif %}
 
-      {% if ip_blocked is not none %}
+      {% if display.ip_blocked is not none %}
       <div class="alert alert-danger">
-        Your IP Address ({{ ip_blocked }}) is not on the whitelist.  You may look but not touch.
+        Your IP Address ({{ display.ip_blocked }}) is not on the whitelist.  You may look but not touch.
       </div>
       {% endif %}
 
-      {% if username is none %}
+      {% if display.username is none %}
       <div class="alert alert-danger">
         Twitter access requires authorization.  Unauthorized users may use text sentiment prediction only.
       </div>
@@ -59,10 +59,10 @@
         <div role="tabpanel">
           <div class="twisent-tab-shrinker">
           <ul class="nav nav-tabs" role="tablist">
-            <li role="presentation" class="{{ 'active' if active_tab == 'twitter' }}">
+            <li role="presentation" class="{{ 'active' if display.active_tab == 'twitter' }}">
               <a href="#twitter" ari-controls="twitter" role="tab" data-toggle="tab">Twitter</a>
             </li>
-            <li role="presentation" class="{{ 'active' if active_tab == 'text' }}">
+            <li role="presentation" class="{{ 'active' if display.active_tab == 'text' }}">
               <a href="#text" ari-controls="text" role="tab" data-toggle="tab">Text</a>
             </li>
           </ul>
@@ -70,7 +70,7 @@
 
           <div class="tab-content">
 
-            <div role="tabpanel" class="tab-pane fade{{ ' in active' if active_tab == 'twitter' else '' }} twisent-form" id="twitter">
+            <div role="tabpanel" class="tab-pane fade{{ ' in active' if display.active_tab == 'twitter' else '' }} twisent-form" id="twitter">
               <p class="lead">The following input types are accepted:</p>
               <ul>
                 <li>@username</li>
@@ -81,36 +81,36 @@
 
               <form action="{{ url_for('twitter') }}" method="post">
                 <div class="form-field">
-                  {{ twform.tw(size=60) }} {% if username is not none %}{{ twform.submit }}{% endif %}
-                  {% if twform.tw.errors %}
+                  {{ display.twform.tw(size=60) }} {% if username is not none %}{{ display.twform.submit }}{% endif %}
+                  {% if display.twform.tw.errors %}
                     <ul class="errors">
-                      {% for error in twform.tw.errors %}
+                      {% for error in display.twform.tw.errors %}
                         <li>{{ error }}</li>
                       {% endfor %}
                     </ul>
                   {% endif %}
                 </div>
-                {{ twform.csrf_token }}
+                {{ display.twform.csrf_token }}
               </form>
 
             </div>
-            <div role="tabpanel" class="tab-pane fade{{ ' in active' if active_tab == 'text' else '' }} twisent-form" id="text">
+            <div role="tabpanel" class="tab-pane fade{{ ' in active' if display.active_tab == 'text' else '' }} twisent-form" id="text">
               <p class="lead">Provide up to 280 characters:</p>
 
               <form action="{{ url_for('text') }}" method="post">
                 <div class="form-field">
-                  {{ txform.tx(cols="70", rows="4")|safe }}
-                  {% if txform.tx.errors %}
+                  {{ display.txform.tx(cols="70", rows="4")|safe }}
+                  {% if display.txform.tx.errors %}
                     <ul class="errors">
-                      {% for error in txform.tx.errors %}
+                      {% for error in display.txform.tx.errors %}
                         <li>{{ error }}</li>
                       {% endfor %}
                     </ul>
                   {% endif %}
                 </div>
-                {% if ip_blocked is none %}<div class="form-field"><br/>{{ txform.submit }}</div>{% endif %}
+                {% if display.ip_blocked is none %}<div class="form-field"><br/>{{ display.txform.submit }}</div>{% endif %}
 
-                {{ txform.csrf_token }}
+                {{ display.txform.csrf_token }}
               </form>
 
             </div>
@@ -121,19 +121,61 @@
 
       </div>
 
-      {% if data[0].text is not none or data[0].messages|length > 0 %}
+        {% if display.pickle %}
+        <div class="twisent-results-container">
+            <p class="lead">Details of Prediction Model</p>
+<pre>{% for m in display.messages %}{{ m }}
+{% endfor %}</pre>
+        </div>
+        {% endif %}
+
+      {% if display.data|length > 0 %}
       <div class="twisent-results-container">
         <p class="lead">Analysis Results</p>
-        Predicted sentiment for {{ data|length }} item{% if data|length > 1 %}s{% endif %}
 
-        {% for d in data %}
-        <div class="twisent-results">
-          {% if pickle %}
-<pre>{% for m in d.messages %}{{ m }}
-{% endfor %}</pre>
-          {% else %}
+
+          {% if display.data|length > 1 %}
+          <div class="twisent-aggregate">
+          <p><b>Aggregate Statistics:</b></p>
           <table>
-            <tr><td class="twisent-label">Sentiment Prediction</td><td>{{ "POSITIVE" if d.pred == 1 else "NEGATIVE" }}</td></tr>
+              <tr>
+                  {% if display.get_proba_by_label() >= 0.5 %}
+                  <td colspan="3" class="twisent-sentiment-label twisent-sentiment-positive">POSITIVE</td>
+                  {% else %}
+                  <td colspan="3" class="twisent-sentiment-label twisent-sentiment-negative">NEGATIVE</td>
+                  {% endif %}
+              </tr>
+              <tr><th>Class</th><th>Count</th><th>Avg Proba</th></tr>
+              <tr>
+                  <td class="twisent-label">Total</td>
+                  <td>{{ display.get_count_by_label() }}</td>
+                  <td>{{ "%.05f"| format(display.get_proba_by_label()|float) }}</td>
+              </tr>
+              <tr>
+                  <td class="twisent-label">Positive</td>
+                  <td>{{ display.get_count_by_label(1) }}</td>
+                  <td>{{ "%.05f"| format(display.get_proba_by_label(1)|float) }}</td>
+              </tr>
+              <tr>
+                  <td class="twisent-label">Negative</td>
+                  <td>{{ display.get_count_by_label(0) }}</td>
+                  <td>{{ "%.05f"| format(1-display.get_proba_by_label(0)|float) }}</td>
+              </tr>
+          </table>
+          </div>
+          {% endif %}
+
+        {% for d in display.data %}
+        <div class="twisent-results">
+          <table>
+            <tr>
+                <td class="twisent-label">Sentiment Prediction</td>
+                {% if d.pred == 1 %}
+                <td class="twisent-sentiment-positive">POSITIVE</td>
+                {% else %}
+                <td class="twisent-sentiment-negative">NEGATIVE</td>
+                {% endif %}
+            </tr>
             <tr><td class="twisent-label">Probability</td><td>{{ "%.05f"| format(d.proba|float) }}</td></tr>
           </table>
           <br />
@@ -158,18 +200,20 @@
             <tr><td class="twisent-label">Retweets</td><td>{{ d.tweet.retweet_count }}</td></tr>
             <tr><td class="twisent-label">Status ID</td><td>{{ d.tweet.id }}</td></tr>
           </table>
-          {% endif %}
 
           {% endif %}
+            <br/>
+            <B>CSV Data:</B>
+<pre>{{ d.get_csv_string() }}</pre>
         </div>
         {% endfor %}
       </div>
       {% endif %}
 
 
-      {% if data[0].text is not none  or data[0].messages|length > 0 %}
+      {% if display.data|length > 0 %}
       <div class="twisent-preformatted-results">
-      {% for d in data %}
+      {% for d in display.data %}
       <div>
         <div>
           <h3>Analysis Results</h3>

@@ -9,7 +9,7 @@ from wtforms.fields import PasswordField
 from wtforms.validators import InputRequired, Length
 
 # needed for the model
-from twisent_lib import predictors, spacy_tokenizer, TwisentData, TwitterAccessor
+from twisent_lib import TwisentData, TwitterAccessor
 import pickle
 
 
@@ -87,54 +87,87 @@ def cookie_username(request):
         return None
 
 
+class TwisentDisplay:
+    """
+    Holds the display data needed to render the page
+    """
+    def __init__(self, twform: TwitterForm, txform: TextForm, username: str,
+                 active_tab: str = "twitter", ip_blocked: str = None, pickle: bool = False,
+                 *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.twform = twform
+        self.txform = txform
+        self.username = username
+        self.data = []
+        self.active_tab = active_tab
+        self.ip_blocked = ip_blocked
+        self.pickle = pickle
+        self.messages = []
+        print("TwisentDisplay constructor, len(data)", len(self.data), "len(messages)", len(self.messages), file=sys.stderr)
+
+    def get_count_by_label(self, label=-1):
+        """
+        Returns the number of items with the indicated label.  Default -1 means total, 0=Neg, 1=Pos
+        :param label:
+        :return: int count of items
+        """
+        if label == -1:
+            return len(self.data)
+        else:
+            return sum(1 for d in self.data if d.pred == label)
+
+    def get_proba_by_label(self, label=-1):
+        """
+        Returns the average proba for the given label.
+        :param label:
+        :return: float probability 0..1
+        """
+        if self.get_count_by_label(label) == 0:
+            if label == 0:
+                # REMEMBER: this is a display only, not a math model, in display we sub neg from 1, so return 1 to get zero
+                return 1
+            else:
+                return 0
+        elif label == -1:
+            # weird case, change neg's to 1-proba, which is different than rest of display
+            pos_proba = sum(d.proba for d in self.data if d.pred == 1)
+            neg_proba = sum(1 - d.proba for d in self.data if d.pred == 0)
+            return (pos_proba + neg_proba) / len(self.data)
+        else:
+            return sum(d.proba for d in self.data if d.pred == label) / self.get_count_by_label(label)
+
+
 @app.route('/')
 def welcome():
     if not auth_user_verify(request):
         return unauthorized_response(request)
 
     theme = app.config['THEME']
-    remote_ip = request.environ.get("HTTP_X_REAL_IP", request.remote_addr)
-    print("Remote IP", remote_ip, file=sys.stderr)
-    return render_template('index.html', theme=theme, flask_debug=app.debug,
-                           twform=TwitterForm(),
-                           txform=TextForm(),
-                           data=[TwisentData()],
-                           active_tab="twitter",
-                           ip_blocked=None,
-                           username=cookie_username(request))
+    # remote_ip = request.environ.get("HTTP_X_REAL_IP", request.remote_addr)
+    # print("Remote IP", remote_ip, file=sys.stderr)
+    display = TwisentDisplay(TwitterForm(), TextForm(), username=cookie_username(request))
+    return render_template('index.html', theme=theme, flask_debug=app.debug, display=display)
 
 
 @app.route('/text', methods=['POST'])
 def text():
-    # no need to verify auth, allowing anonymous text prediction
-    #if not auth_user_verify(request):
-    #    return unauthorized_response(request)
+    if not auth_user_verify(request):
+        return unauthorized_response(request)
 
     theme = app.config['THEME']
 
     form = TextForm()
+    display = TwisentDisplay(TwitterForm(), form, username=cookie_username(request), active_tab="text")
     d = TwisentData()
     if form.validate_on_submit():
         d.text = form.tx.data
         d.pred = meta_model['pipeline'].predict([d.text])[0]
         d.proba = meta_model['pipeline'].predict_proba([d.text])[0, d.pred]
-        d.messages.append("TEXT mode")
 
-        return render_template('index.html', theme=theme, flask_debug=app.debug,
-                               twform=TwitterForm(),
-                               txform=form,
-                               data=[d],
-                               active_tab="text",
-                               ip_blocked=None,
-                               username=cookie_username(request))
-    else:
-        return render_template('index.html', theme=theme, flask_debug=app.debug,
-                               twform=TwitterForm(),
-                               txform=form,
-                               d=[TwisentData()],
-                               active_tab="text",
-                               ip_blocked=None,
-                               username=cookie_username(request))
+        display.messages.append("TEXT mode")
+        display.data.append(d)
+
+    return render_template('index.html', theme=theme, flask_debug=app.debug, display=display)
 
 
 @app.route('/twitter', methods=['POST'])
@@ -145,7 +178,7 @@ def twitter():
     theme = app.config['THEME']
 
     form = TwitterForm()
-    data_list = []
+    display = TwisentDisplay(form, TextForm(), username=cookie_username(request))
 
     if form.validate_on_submit():
         t = form.tw.data
@@ -200,26 +233,9 @@ def twitter():
             d.pred = meta_model['pipeline'].predict([d.text])[0]
             d.proba = meta_model['pipeline'].predict_proba([d.text])[0, d.pred]
             d.messages.append("MODE: twitter - " + input_mode)
-            data_list.append(d)
+            display.data.append(d)
 
-        if len(data_list) == 0:
-            data_list.append(TwisentData())
-
-        return render_template('index.html', theme=theme, flask_debug=app.debug,
-                               twform=form,
-                               txform=TextForm(),
-                               data=data_list,
-                               active_tab="twitter",
-                               ip_blocked=None,
-                               username=cookie_username(request))
-    else:
-        return render_template('index.html', theme=theme, flask_debug=app.debug,
-                               twform=form,
-                               txform=TextForm,
-                               data=[TwisentData()],
-                               active_tab="twitter",
-                               ip_blocked=None,
-                               username=cookie_username(request))
+    return render_template('index.html', theme=theme, flask_debug=app.debug, display=display)
 
 
 @app.route('/pickle', methods=['GET'])
@@ -228,18 +244,13 @@ def pickle():
         return unauthorized_response(request)
 
     theme = app.config['THEME']
-    d = TwisentData()
-    for k, v in meta_model.items():
-        d.messages.append("[" + k + "] [" + str(v) + "]")
 
-    return render_template('index.html', theme=theme, flask_debug=app.debug,
-                           twform=TwitterForm(),
-                           txform=TextForm(),
-                           data=[d],
-                           active_tab="twitter",
-                           ip_blocked=None,
-                           username=cookie_username(request),
-                           pickle=True)
+    display = TwisentDisplay(TwitterForm(), TextForm(), username=cookie_username(request), pickle=True)
+
+    for k, v in meta_model.items():
+        display.messages.append("[" + k + "] [" + str(v) + "]")
+
+    return render_template('index.html', theme=theme, flask_debug=app.debug, display=display)
 
 
 @app.route('/login', methods=['GET', 'POST'])

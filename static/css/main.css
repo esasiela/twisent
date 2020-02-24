@@ -45,6 +45,39 @@
     border: 1px solid #999999;
 }
 
+.twisent-aggregate {
+    padding: 10px;
+    margin-top: 10px;
+    background-color: #AAAAAA;
+    border-radius: 4px;
+    border: 1px solid #444444;
+}
+.twisent-aggregate table {
+    background-color: #ffffff;
+    border: 1px solid #000000;
+    text-align: right;
+}
+
+.twisent-aggregate table td {
+    border: 1px solid #000000;
+    margin: 2px;
+    padding: 2px;
+}
+.twisent-aggregate table th {
+    border: 1px solid #000000;
+    text-align: right;
+    padding: 2px;
+}
+.twisent-sentiment-label {
+    text-align: center;
+    font-weight: bold;
+}
+.twisent-sentiment-positive {
+    background-color: #00d615;
+}
+.twisent-sentiment-negative {
+    background-color: #ff8787;
+}
 .twisent-label {
     font-weight: bold;
 }
