@@ -21,7 +21,7 @@ if __name__ == "__main__":
     print_stamp("Reading complete.", t)
 
     retrainWhole = True
-    truncateRows = 0
+    truncateRows = 100_000
 
     if truncateRows > 0:
         # grab the first bunch of rows, then grab another bunch starting at 800000
@@ -81,11 +81,12 @@ if __name__ == "__main__":
     )
 
     model_rf = RandomForestClassifier(
-        n_estimators=250,
+        n_estimators=150,
         max_depth=6,
+        max_features="sqrt"
     )
 
-    model = model_xgb
+    model = model_rf
 
     pipe = Pipeline([
         ("cleaner", CleanTextTransformer()),
