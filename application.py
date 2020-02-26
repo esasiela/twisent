@@ -4,9 +4,9 @@ import json
 
 from flask import Flask, request, Response, render_template, redirect, url_for, make_response
 from flask_wtf import FlaskForm
-from wtforms import StringField, SubmitField, TextAreaField
+from wtforms import StringField, SubmitField, TextAreaField, IntegerField
 from wtforms.fields import PasswordField
-from wtforms.validators import InputRequired, Length
+from wtforms.validators import InputRequired, Length, NumberRange
 
 # needed for the model
 from twisent_lib import TwisentData, TwitterAccessor
@@ -29,6 +29,7 @@ with open(app.config['PICKLE_PATH'], "rb") as f:
 
 class TwitterForm(FlaskForm):
     tw = StringField("Input", validators=[InputRequired()])
+    throttle = IntegerField("Result Limit", validators=[NumberRange(min=1, max=50)])
     submit = SubmitField("Predict Sentiment")
 
 
@@ -162,7 +163,9 @@ def welcome():
     theme = app.config['THEME']
     # remote_ip = request.environ.get("HTTP_X_REAL_IP", request.remote_addr)
     # print("Remote IP", remote_ip, file=sys.stderr)
-    display = TwisentDisplay(TwitterForm(), TextForm(), username=cookie_username(request))
+    tw = TwitterForm()
+    tw.throttle.data = TwitterAccessor.COUNT_THROTTLE
+    display = TwisentDisplay(tw, TextForm(), username=cookie_username(request))
     return render_template('index.html', theme=theme, flask_debug=app.debug, display=display)
 
 
@@ -174,7 +177,9 @@ def text():
     theme = app.config['THEME']
 
     form = TextForm()
-    display = TwisentDisplay(TwitterForm(), form, username=cookie_username(request), active_tab="text")
+    tw = TwitterForm()
+    tw.throttle.data = TwitterAccessor.COUNT_THROTTLE
+    display = TwisentDisplay(tw, form, username=cookie_username(request), active_tab="text")
     d = TwisentData()
     if form.validate_on_submit():
         d.text = form.tx.data
@@ -198,6 +203,8 @@ def twitter():
     display = TwisentDisplay(form, TextForm(), username=cookie_username(request))
 
     if form.validate_on_submit():
+        TwitterAccessor.COUNT_THROTTLE = form.throttle.data
+
         t = form.tw.data
         ta = TwitterAccessor()
 
@@ -262,7 +269,9 @@ def pickle():
 
     theme = app.config['THEME']
 
-    display = TwisentDisplay(TwitterForm(), TextForm(), username=cookie_username(request), pickle=True)
+    tw = TwitterForm()
+    tw.throttle.data = TwitterAccessor.COUNT_THROTTLE
+    display = TwisentDisplay(tw, TextForm(), username=cookie_username(request), pickle=True)
 
     for k, v in meta_model.items():
         display.messages.append("[" + k + "] [" + str(v) + "]")

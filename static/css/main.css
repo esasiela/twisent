@@ -73,9 +73,11 @@
     font-weight: bold;
 }
 .twisent-sentiment-positive {
+    border: 1px solid #000000;
     background-color: #00d615;
 }
 .twisent-sentiment-negative {
+    border: 1px solid #000000;
     background-color: #ff8787;
 }
 .twisent-label {

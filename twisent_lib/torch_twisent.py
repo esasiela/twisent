@@ -8,30 +8,8 @@ import torch.nn.functional as F
 
 from torchtext import data, datasets
 
-from twisent_lib import print_stamp, twisent_tokenizer
-
-
-def generate_bigrams(x):
-    n_grams = set(zip(*[x[i:] for i in range(2)]))
-    for n_gram in n_grams:
-        x.append(' '.join(n_gram))
-    return x
-
-
-class TwisentDataset(data.Dataset):
-    def __init__(self, df, fields, **kwargs):
-        examples = []
-
-        for index, row in df.iterrows():
-            text = row['text']
-            target = row['target']
-            examples.append(data.Example.fromlist([text, target], fields))
-
-        super().__init__(examples, fields, **kwargs)
-
-    @staticmethod
-    def sort_key(ex):
-        return len(ex.text)
+from twisent_lib import print_stamp, twisent_tokenizer, generate_bigrams, TwisentDataset, \
+    FastText
 
 
 def count_parameters(model):
@@ -87,19 +65,6 @@ def evaluate(model, iterator, criterion):
     return epoch_loss / len(iterator), epoch_acc / len(iterator)
 
 
-class FastText(nn.Module):
-    def __init__(self, vocab_size, embedding_dim, output_dim, pad_idx):
-        super().__init__()
-        self.embedding = nn.Embedding(vocab_size, embedding_dim, padding_idx=pad_idx)
-        self.fc = nn.Linear(embedding_dim, output_dim)
-
-    def forward(self, text):
-        embedded = self.embedding(text)
-        embedded = embedded.permute(1, 0, 2)
-        pooled = F.avg_pool2d(embedded, (embedded.shape[1], 1)).squeeze(1)
-        return self.fc(pooled)
-
-
 if __name__ == "__main__":
     main_start = print_stamp("We begin!")
     print("=================================================")
@@ -131,7 +96,7 @@ if __name__ == "__main__":
     print("")
 
     RETRAIN_WHOLE = False
-    TRUNCATE_ROWS = 0
+    TRUNCATE_ROWS = 10000
 
     t = print_stamp("Modifying dataframe...")
 
