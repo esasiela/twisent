@@ -81,7 +81,7 @@
 
               <form action="{{ url_for('twitter') }}" method="post">
                 <div class="form-field">
-                  {{ display.twform.tw(size=50) }} {{ display.twform.throttle.label }} {{ display.twform.throttle(size=2) }} {% if username is not none %}{{ display.twform.submit }}{% endif %}
+                  {{ display.twform.tw(size=50) }} {{ display.twform.throttle.label }} {{ display.twform.throttle(size=2) }} {% if display.username is not none %}{{ display.twform.submit }}{% endif %}
                   {% if display.twform.tw.errors %}
                     <ul class="errors">
                       {% for error in display.twform.tw.errors %}
