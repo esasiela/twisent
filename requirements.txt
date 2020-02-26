@@ -8,7 +8,7 @@ chardet==3.0.4
 Click==7.0
 coala-utils==0.5.1
 cymem==2.0.3
-en-core-web-sm==2.2.5
+#en-core-web-sm==2.2.5
 Flask==1.1.1
 Flask-WTF==0.14.3
 future==0.18.2
