@@ -69,13 +69,12 @@ def auth_user_verify(request):
 
 
 def unauthorized_response(request):
+    tw = TwitterForm()
+    tw.throttle.data = TwitterAccessor.COUNT_THROTTLE
+    display = TwisentDisplay(tw, TextForm(), username=cookie_username(request))
+
     return render_template('index.html', theme=app.config['THEME'], flask_debug=app.debug,
-                           twform=TwitterForm(),
-                           txform=TextForm(),
-                           data=[TwisentData()],
-                           active_tab="text",
-                           ip_blocked=None,
-                           username=None)
+                           display=display)
 
 
 def cookie_username(request):
