@@ -8,3 +8,5 @@ Dockerrun.local.json
 .elasticbeanstalk/
 instance/
 data/
+.data/
+.vector_cache/
