@@ -73,10 +73,11 @@
             <div role="tabpanel" class="tab-pane fade{{ ' in active' if display.active_tab == 'twitter' else '' }} twisent-form" id="twitter">
               <p class="lead">The following input types are accepted:</p>
               <ul>
+                <li>keyword(s)</li>
                 <li>@username</li>
                 <li>#hashtag</li>
                 <li>Twitter URL</li>
-                <li>Status ID</li>
+                <li>Status ID (any pure numeric)</li>
               </ul>
 
               <form action="{{ url_for('twitter') }}" method="post">
@@ -200,7 +201,7 @@
                   <td colspan="3" class="twisent-sentiment-label twisent-sentiment-negative">NEGATIVE</td>
                   {% endif %}
               </tr>
-              <tr><th>Class</th><th>Count</th><th>Avg Proba</th></tr>
+              <tr><th>Class</th><th>Count</th><th>Avg Pos Proba</th></tr>
               <tr>
                   <td class="twisent-label">Total</td>
                   <td>{{ display.get_count_by_label() }}</td>
@@ -239,7 +240,13 @@
                 {% endif %}
             </tr>
               {% if d.pred > -1 %}
-            <tr><td class="twisent-label">Probability</td><td>{{ "%.05f"| format(d.proba|float) }}</td></tr>
+            <tr><td class="twisent-label">
+                {% if d.pred == 1 %}
+                Positive
+                {% else %}
+                Negative
+                {% endif %}
+                Probability</td><td>{{ "%.05f"| format(d.proba|float) }}</td></tr>
               {% endif %}
           </table>
           <br />
