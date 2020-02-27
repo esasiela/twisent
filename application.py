@@ -71,7 +71,7 @@ def auth_user_verify(request):
 def unauthorized_response(request):
     tw = TwitterForm()
     tw.throttle.data = TwitterAccessor.COUNT_THROTTLE
-    display = TwisentDisplay(tw, TextForm(), username=cookie_username(request))
+    display = TwisentDisplay(tw, TextForm(), username=cookie_username(request), active_tab="text")
 
     return render_template('index.html', theme=app.config['THEME'], flask_debug=app.debug,
                            display=display)
@@ -105,18 +105,18 @@ class TwisentDisplay:
         self.messages = []
         print("TwisentDisplay constructor, len(data)", len(self.data), "len(messages)", len(self.messages), file=sys.stderr)
 
-    def get_count_by_label(self, label=-1):
+    def get_count_by_label(self, label=None):
         """
         Returns the number of items with the indicated label.  Default -1 means total, 0=Neg, 1=Pos
         :param label:
         :return: int count of items
         """
-        if label == -1:
+        if label is None:
             return len(self.data)
         else:
             return sum(1 for d in self.data if d.pred == label)
 
-    def get_proba_by_label(self, label=-1):
+    def get_proba_by_label(self, label=None):
         """
         Returns the average proba for the given label.
         :param label:
@@ -128,11 +128,14 @@ class TwisentDisplay:
                 return 1
             else:
                 return 0
-        elif label == -1:
+        elif len(self.data) - self.get_count_by_label(-1) == 0:
+            # they're all unpredictable
+            return 0
+        elif label is None:
             # weird case, change neg's to 1-proba, which is different than rest of display
             pos_proba = sum(d.proba for d in self.data if d.pred == 1)
             neg_proba = sum(1 - d.proba for d in self.data if d.pred == 0)
-            return (pos_proba + neg_proba) / len(self.data)
+            return (pos_proba + neg_proba) / (len(self.data) - self.get_count_by_label(-1))
         else:
             return sum(d.proba for d in self.data if d.pred == label) / self.get_count_by_label(label)
 
@@ -165,6 +168,12 @@ def welcome():
     tw = TwitterForm()
     tw.throttle.data = TwitterAccessor.COUNT_THROTTLE
     display = TwisentDisplay(tw, TextForm(), username=cookie_username(request))
+    display.messages.append("Pickle Path [{0:s}]".format(app.config['PICKLE_PATH']))
+    display.messages.append("CWD [{0:s}]".format(os.getcwd()))
+
+    for k, v in app.config.items():
+        display.messages.append("key [{0:s}] val [{1:s}]".format(k, str(v)))
+
     return render_template('index.html', theme=theme, flask_debug=app.debug, display=display)
 
 
@@ -182,8 +191,12 @@ def text():
     d = TwisentData()
     if form.validate_on_submit():
         d.text = form.tx.data
-        d.pred = meta_model['pipeline'].predict([d.text])[0]
-        d.proba = meta_model['pipeline'].predict_proba([d.text])[0, d.pred]
+        if len(d.get_spacy_text()) == 0:
+            d.pred = -1
+            d.proba = -1
+        else:
+            d.pred = meta_model['pipeline'].predict([d.text])[0]
+            d.proba = meta_model['pipeline'].predict_proba([d.text])[0, d.pred]
 
         display.messages.append("TEXT mode")
         display.data.append(d)
@@ -253,8 +266,12 @@ def twitter():
             d = TwisentData()
             d.text = tweet.AsDict()['text']
             d.tweet = tweet
-            d.pred = meta_model['pipeline'].predict([d.text])[0]
-            d.proba = meta_model['pipeline'].predict_proba([d.text])[0, d.pred]
+            if len(d.get_spacy_text()) == 0:
+                d.pred = -1
+                d.proba = -1
+            else:
+                d.pred = meta_model['pipeline'].predict([d.text])[0]
+                d.proba = meta_model['pipeline'].predict_proba([d.text])[0, d.pred]
             d.messages.append("MODE: twitter - " + input_mode)
             display.data.append(d)
 

@@ -38,9 +38,12 @@ class TwisentData:
         self.tweet = None
         self.pred = -1
         self.proba = -1
+        self.spacy_text = []
 
     def get_spacy_text(self):
-        return twisent_tokenizer(self.text)
+        if len(self.spacy_text) == 0:
+            self.spacy_text = twisent_tokenizer(self.text)
+        return self.spacy_text
 
     def as_dataframe(self):
         """

@@ -21,7 +21,7 @@ if __name__ == "__main__":
     print_stamp("Reading complete.", t)
 
     retrainWhole = True
-    truncateRows = 100_000
+    truncateRows = 0
 
     if truncateRows > 0:
         # grab the first bunch of rows, then grab another bunch starting at 800000
@@ -86,7 +86,7 @@ if __name__ == "__main__":
         max_features="sqrt"
     )
 
-    model = model_rf
+    model = model_lr
 
     pipe = Pipeline([
         ("cleaner", CleanTextTransformer()),
@@ -123,6 +123,9 @@ if __name__ == "__main__":
         print("")
 
         t = print_stamp("Saving model to pickle file...")
+        pickle_path = "pickle/twisent_trained_model" + datetime.now().strftime("%Y%m%d_%H%M%S") + ".pkl"
+        print(pickle_path)
+
         meta_pickle = {
             'pipeline': pipe,
             'num_train_rows': full_df.shape[0],
@@ -130,7 +133,6 @@ if __name__ == "__main__":
             'git_commit': '47f3d4e77d8b7eb0d78fa6297d12bbbbc12a19a6',
         }
 
-        pickle_path = "pickle/twisent_trained_model" + datetime.now().strftime("%Y%m%d_%H%M%S") + ".pkl"
         with open(pickle_path, "wb") as f:
             pickle.dump(meta_pickle, f)
         print_stamp("Pickle complete.", t)

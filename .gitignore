@@ -10,3 +10,4 @@ instance/
 data/
 .data/
 .vector_cache/
+pickle/archive/

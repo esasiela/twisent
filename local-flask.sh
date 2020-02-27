@@ -1,9 +1,7 @@
 #!/bin/sh
 
-. instance/twisent_config_secret.sh
+. ./venv/Scripts/activate
 
-export DISPLAY_APP_NAME="Hedge Court - TwiSent (DEV)"
-export PICKLE_PATH="pickle/twisent_trained_model.pkl"
-export FLASK_APP=application.py
-export FLASK_ENV=development
+. ./instance/twisent_config_secret.sh
+
 flask run

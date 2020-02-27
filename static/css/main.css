@@ -80,6 +80,10 @@
     border: 1px solid #000000;
     background-color: #ff8787;
 }
+.twisent-sentiment-unknown {
+    border: 1px solid #000000;
+    background-color: #d4af37;
+}
 .twisent-label {
     font-weight: bold;
 }

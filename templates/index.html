@@ -6,7 +6,7 @@
     <meta name="description" content="">
     <meta name="author" content="">
 
-    <title>Hedge Court - TwiSent</title>
+    <title>{{ config.DISPLAY_APP_NAME }}</title>
 
     <!-- Bootstrap core CSS -->
     <link href="{{ url_for('static', filename='bootstrap/css/theme/' + theme + '/bootstrap.css') }}" rel="stylesheet">
@@ -129,6 +129,18 @@
 
       </div>
 
+        {% if config.DISPLAY_PAGE_MSG == 1 and display.messages|length > 0 %}
+        <br/>
+            <div class="twisent-results-container">
+                <p class="lead">Page Messages</p>
+                <ul>
+                    {% for m in display.messages %}
+                    <li>{{ m }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+
 {% if display.pickle or display.data|length > 0 %}
 <br/>
 <div role="tabpanel">
@@ -143,10 +155,11 @@
         </ul>
     </div>
 
+
+
+
     <div class="tab-content">
         <div role="tabpanel" class="tab-pane fade in active twisent-form" id="pretty">
-
-
 
 
         {% if display.pickle %}
@@ -189,6 +202,11 @@
                   <td>{{ display.get_count_by_label(0) }}</td>
                   <td>{{ "%.05f"| format(1-display.get_proba_by_label(0)|float) }}</td>
               </tr>
+              <tr>
+                  <td class="twisent-label">Unknown</td>
+                  <td>{{ display.get_count_by_label(-1) }}</td>
+                  <td>n/a</td>
+              </tr>
           </table>
           </div>
           {% endif %}
@@ -200,11 +218,15 @@
                 <td class="twisent-label">Sentiment Prediction</td>
                 {% if d.pred == 1 %}
                 <td class="twisent-sentiment-positive">POSITIVE</td>
-                {% else %}
+                {% elif d.pred == 0 %}
                 <td class="twisent-sentiment-negative">NEGATIVE</td>
+                {% else %}
+                <td class="twisent-sentiment-unknown">Cannot Predict</td>
                 {% endif %}
             </tr>
+              {% if d.pred > -1 %}
             <tr><td class="twisent-label">Probability</td><td>{{ "%.05f"| format(d.proba|float) }}</td></tr>
+              {% endif %}
           </table>
           <br />
 
