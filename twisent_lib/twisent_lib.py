@@ -102,7 +102,6 @@ class TwitterAccessor:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.tweets = []
-        # TODO error handling if Api call fails
         self.api = Api(
             consumer_key=os.environ.get("TWITTER_CONSUMER_KEY"),
             consumer_secret=os.environ.get("TWITTER_CONSUMER_SECRET"),
@@ -111,18 +110,15 @@ class TwitterAccessor:
         )
 
     def get_tweet_by_id(self, status_id):
-        # TODO error handling if Api call fails
         self.tweets.append(self.api.GetStatus(status_id=status_id))
 
     def get_tweets_by_username(self, username):
-        # TODO error handling if Api call fails
         self.tweets = self.api.GetUserTimeline(screen_name=username, count=TwitterAccessor.COUNT_THROTTLE)
 
     def get_tweets_by_hashtag(self, hashtag: str):
         hashtag = hashtag.split()[0]
         query_string = urlencode({'q': str("(" + hashtag + ")")})
         # Twitter API returns stuff without the hashtag, so filter only relevants
-        # TODO error handling if Api call fails
         search_result = self.api.GetSearch(raw_query=query_string, count=TwitterAccessor.COUNT_THROTTLE)
         for tweet in search_result:
             # hashtags is a list, each element has a 'text' attribute
@@ -131,6 +127,10 @@ class TwitterAccessor:
                     # only keep tweets that actually have this hashtag, Twitter API sometimes sends others
                     self.tweets.append(tweet)
                     break
+
+    def get_tweets_by_search(self, query: str):
+        query_string = urlencode({'q': str("(" + query + ")")})
+        self.tweets = self.api.GetSearch(raw_query=query_string, count=TwitterAccessor.COUNT_THROTTLE)
 
 
 def twisent_tokenizer(sentence, parser=English(), stop_words=spacy.lang.en.stop_words.STOP_WORDS,

@@ -2,6 +2,8 @@ import os
 import sys
 import json
 
+import urllib.parse
+
 from flask import Flask, request, Response, render_template, redirect, url_for, make_response
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, TextAreaField, IntegerField
@@ -11,6 +13,8 @@ from wtforms.validators import InputRequired, Length, NumberRange
 # needed for the model
 from twisent_lib import TwisentData, TwitterAccessor
 import pickle
+
+from twitter import TwitterError
 
 
 # Create the Flask app, load default config from config.py, load secret config from instance/config.py
@@ -103,7 +107,8 @@ class TwisentDisplay:
         self.ip_blocked = ip_blocked
         self.pickle = pickle
         self.messages = []
-        print("TwisentDisplay constructor, len(data)", len(self.data), "len(messages)", len(self.messages), file=sys.stderr)
+        self.errors = []
+        # print("TwisentDisplay constructor, len(data)", len(self.data), "len(messages)", len(self.messages), file=sys.stderr)
 
     def get_count_by_label(self, label=None):
         """
@@ -221,13 +226,21 @@ def twitter():
         ta = TwitterAccessor()
 
         # first, look at t to see if it is a URL that we can do something with:
+        # search  https://twitter.com/search?q=%40arduino&src=typed_query
         # hashtag https://twitter.com/hashtag/Arduino?src=hashtag_click
         # user    https://twitter.com/arduino
         # tweet   https://twitter.com/arduino/status/1225785143501230082
+        url_search_prefix = "https://twitter.com/search?q="
         url_hashtag_prefix = "https://twitter.com/hashtag/"
         url_status_delim = "/status/"
         url_username_prefix = "https://twitter.com/"
-        if t.startswith(url_hashtag_prefix):
+
+        if t.startswith(url_search_prefix):
+            # kill the prefix, split on & and keep the first element, and pass it to the rest
+            print("URL Search, search", t, file=sys.stderr)
+            t = urllib.parse.unquote(t.replace(url_search_prefix, "").split("&")[0])
+            form.tw.data = t
+        elif t.startswith(url_hashtag_prefix):
             # kill the prefix, split on ? and keep the left half
             print("URL Search, hashtag", t, file=sys.stderr)
             t = "#" + t.replace(url_hashtag_prefix, "").split("?")[0]
@@ -235,7 +248,6 @@ def twitter():
         elif url_status_delim in t:
             # split by /status/, grab the right half, split that by ? and grab the left half
             # more fun this way than a regex
-            # TODO check that status id is purely numeric, or just let it fail because this URL paste is kinda get-what-you-get
             print("URL Search, status", t, file=sys.stderr)
             t = t.split(url_status_delim)[1].split("?")[0]
             form.tw.data = t
@@ -246,21 +258,27 @@ def twitter():
             t = "@" + t.replace(url_username_prefix, "").split("?")[0]
             form.tw.data = t
 
-        if t.startswith('@'):
-            # print("Twitter search, mode=@username", t, file=sys.stderr)
-            input_mode = "@username"
-            ta.get_tweets_by_username(t)
-        elif t.startswith('#'):
-            # print("Twitter search, mode=#hashtag", t, file=sys.stderr)
-            input_mode = "#hashtag"
-            ta.get_tweets_by_hashtag(t)
-        else:
-            # print("Twitter search, mode=status_id", t, file=sys.stderr)
-            input_mode = "status_id"
-            # assume text is pure numeric, i.e. a status id
-            status_id = int(t)
-            ta.get_tweet_by_id(status_id)
-            # TODO error handling (Api fails, no tweet found, etc)
+        try:
+            if t.startswith('@'):
+                # print("Twitter search, mode=@username", t, file=sys.stderr)
+                input_mode = "@username"
+                ta.get_tweets_by_username(t)
+            elif t.startswith('#'):
+                # print("Twitter search, mode=#hashtag", t, file=sys.stderr)
+                input_mode = "#hashtag"
+                ta.get_tweets_by_hashtag(t)
+            else:
+                # print("Twitter search, mode=status_id", t, file=sys.stderr)
+                input_mode = "status_id"
+                # if text is pure numeric (i.e. a status id) then perform a status id search
+                try:
+                    status_id = int(t)
+                    ta.get_tweet_by_id(status_id)
+                except ValueError:
+                    ta.get_tweets_by_search(t)
+
+        except TwitterError as e:
+            display.errors.append(e.message)
 
         for tweet in ta.tweets:
             d = TwisentData()

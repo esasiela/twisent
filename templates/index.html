@@ -129,6 +129,20 @@
 
       </div>
 
+      {% if display.errors|length > 0 %}
+        <br />
+      <div class="alert alert-danger">
+          <p class="lead">Error</p>
+          <ul>
+          {% for m in display.errors %}
+              <li>{{ m }}</li>
+          {% endfor %}
+          </ul>
+      </div>
+      {% endif %}
+
+
+
         {% if config.DISPLAY_PAGE_MSG == 1 and display.messages|length > 0 %}
         <br/>
             <div class="twisent-results-container">

@@ -11,3 +11,4 @@ data/
 .data/
 .vector_cache/
 pickle/archive/
+.ipynb_checkpoints/
