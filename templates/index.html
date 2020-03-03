@@ -17,6 +17,8 @@
     <!-- Custom Twisent CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
 
+    <!-- Leafletjs -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css" integrity="sha512-xwE/Az9zrjBIphAcBb3F6JVqxf46+CDLwfLMHloNu6KEQCAWi6HcDUbeOfBIptF7tcCzusKFjFw2yuvEpDL9wQ==" crossorigin=""/>
   </head>
 
   <body>
@@ -62,6 +64,9 @@
             <li role="presentation" class="{{ 'active' if display.active_tab == 'twitter' }}">
               <a href="#twitter" ari-controls="twitter" role="tab" data-toggle="tab">Twitter</a>
             </li>
+            <li role="presentation" class="{{ 'active' if display.active_tab == 'geo' }}">
+              <a href="#geo" ari-controls="geo" role="tab" data-toggle="tab">Geo</a>
+            </li>
             <li role="presentation" class="{{ 'active' if display.active_tab == 'text' }}">
               <a href="#text" ari-controls="text" role="tab" data-toggle="tab">Text</a>
             </li>
@@ -82,7 +87,12 @@
 
               <form action="{{ url_for('twitter') }}" method="post">
                 <div class="form-field">
-                  {{ display.twform.tw(size=50) }} {{ display.twform.throttle.label }} {{ display.twform.throttle(size=2) }} {% if display.username is not none %}{{ display.twform.submit }}{% endif %}
+                  {{ display.twform.tw(size=50) }} {{ display.twform.throttle.label }} {{ display.twform.throttle(size=2) }}
+                  {% if display.username is not none %}
+                    {{ display.twform.submit }}
+                  {% else %}
+                    <a href="{{ url_for('login') }}">Login</a> to search
+                  {% endif %}
                   {% if display.twform.tw.errors %}
                     <ul class="errors">
                       {% for error in display.twform.tw.errors %}
@@ -103,6 +113,29 @@
               </form>
 
             </div>
+
+            <div role="tabpanel" class="tab-pane fade{{ ' in active' if display.active_tab == 'geo' else '' }} twisent-form" id="geo">
+                <p class="lead">Geo Mode:</p>
+                <form action="{{ url_for('geo') }}" method="post">
+                    <div class="form-field">
+                        Click map to specify center of 1km search:
+                        {% if display.username is not none %}
+                            {{ display.geoform.submit }}
+                        {% else %}
+                            <a href="{{ url_for('login') }}">Login</a> to search
+                        {% endif %}
+
+                        <div id="map-container"></div>
+
+                        {{ display.geoform.lat }}
+                        {{ display.geoform.lng }}
+                        {{ display.geoform.radius }}
+                    </div>
+                    {{ display.geoform.csrf_token }}
+                </form>
+            </div>
+
+
             <div role="tabpanel" class="tab-pane fade{{ ' in active' if display.active_tab == 'text' else '' }} twisent-form" id="text">
               <p class="lead">Provide up to 280 characters:</p>
 
@@ -144,7 +177,7 @@
 
 
 
-        {% if config.DISPLAY_PAGE_MSG == 1 and display.messages|length > 0 %}
+        {% if config.DISPLAY_PAGE_MSG|int == 1 and display.messages|length > 0 %}
         <br/>
             <div class="twisent-results-container">
                 <p class="lead">Page Messages</p>
@@ -334,6 +367,9 @@ Messages ({{ d.messages|length }}):
 
     <script src="{{ url_for('static', filename='jquery/jquery.js') }}"></script>
     <script src="{{ url_for('static', filename='bootstrap/js/bootstrap.min.js') }}"></script>
+
+    <script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js" integrity="sha512-gZwIG9x3wUXg2hdXF6+rVkLF/0Vi9U8D2Ntg4Ga5I5BZpVkVxlJWbSQtXPSiUTtC0TjtGOmxa1AJPuV0CPthew==" crossorigin=""></script>
+
     <script type="text/javascript">
 $(document).ready(function() {
     $("#csv-copy").click(function() {
@@ -352,7 +388,38 @@ $(document).ready(function() {
         document.execCommand('copy')
         element.remove()
     }
+
+    var geo_map = L.map('map-container').setView([{{ display.geoform.lat.data }}, {{ display.geoform.lng.data }}], 13);
+    L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}', {
+        attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, <a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
+        maxZoom: 18,
+        id: 'mapbox/streets-v11',
+        tileSize: 512,
+        zoomOffset: -1,
+        accessToken: 'pk.eyJ1IjoiaGVkZ2Vjb3VydHJvYm90cyIsImEiOiJjazdidmRxcDYwM2huM21qeG90eHhodm5vIn0.hgUesfuWMFI-SJyP5ldRKQ'
+    }).addTo(geo_map);
+
+    var geo_marker = L.marker([{{ display.geoform.lat.data }}, {{ display.geoform.lng.data }}]).addTo(geo_map);
+    $('#geo-lat').val({{ display.geoform.lat.data }});
+    $('#geo-lng').val({{ display.geoform.lng.data }});
+
+    geo_map.on('click', function(e) {
+        if (geo_marker) {
+            geo_map.removeLayer(geo_marker);
+        }
+        geo_marker = L.marker(e.latlng).addTo(geo_map);
+        $('#geo-lat').val(e.latlng.lat);
+        $('#geo-lng').val(e.latlng.lng);
+    });
+
+    $('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
+        var tab = $(e.target);
+        if (tab.attr("href") == "#geo") {
+            geo_map.invalidateSize()
+        }
+    });
 })
+
     </script>
   </body>
 </html>

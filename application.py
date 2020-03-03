@@ -7,7 +7,7 @@ import urllib.parse
 from flask import Flask, request, Response, render_template, redirect, url_for, make_response
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, TextAreaField, IntegerField
-from wtforms.fields import PasswordField
+from wtforms.fields import PasswordField, HiddenField
 from wtforms.validators import InputRequired, Length, NumberRange
 
 # needed for the model
@@ -31,23 +31,6 @@ with open(app.config['PICKLE_PATH'], "rb") as f:
     meta_model = pickle.load(f)
 
 
-class TwitterForm(FlaskForm):
-    tw = StringField("Input", validators=[InputRequired()])
-    throttle = IntegerField("Result Limit", validators=[NumberRange(min=1, max=50)])
-    submit = SubmitField("Predict Sentiment")
-
-
-class TextForm(FlaskForm):
-    tx = TextAreaField("Input", validators=[InputRequired(), Length(max=280)])
-    submit = SubmitField("Predict Sentiment")
-
-
-class LoginForm(FlaskForm):
-    username = StringField("Username", validators=[InputRequired()])
-    password = PasswordField("Password", validators=[InputRequired()])
-    submit = SubmitField("Login")
-
-
 def ip_whitelist_verify(request):
     remote_addr = request.environ.get("HTTP_X_REAL_IP", request.remote_addr)
     white_list = os.environ.get("IP_WHITELIST")
@@ -68,19 +51,6 @@ def ip_whitelist_response(request):
                            username=None)
 
 
-def auth_user_verify(request):
-    return cookie_username(request) is not None
-
-
-def unauthorized_response(request):
-    tw = TwitterForm()
-    tw.throttle.data = TwitterAccessor.COUNT_THROTTLE
-    display = TwisentDisplay(tw, TextForm(), username=cookie_username(request), active_tab="text")
-
-    return render_template('index.html', theme=app.config['THEME'], flask_debug=app.debug,
-                           display=display)
-
-
 def cookie_username(request):
     c = request.cookies.get("magic")
     if c is not None:
@@ -91,15 +61,40 @@ def cookie_username(request):
         return None
 
 
+class TwitterForm(FlaskForm):
+    tw = StringField("Input", validators=[InputRequired()])
+    throttle = IntegerField("Result Limit", validators=[NumberRange(min=1, max=50)])
+    submit = SubmitField("Predict Sentiment")
+
+
+class GeoForm(FlaskForm):
+    lat = HiddenField("Latitude", validators=[InputRequired()], id="geo-lat", default=app.config['GEO_DEFAULT_LAT'])
+    lng = HiddenField("Longitude", validators=[InputRequired()], id="geo-lng", default=app.config['GEO_DEFAULT_LNG'])
+    radius = HiddenField("Radius", validators=[InputRequired()], id="geo-rad", default=app.config['GEO_DEFAULT_RADIUS'])
+    submit = SubmitField("Predict Sentiment")
+
+
+class TextForm(FlaskForm):
+    tx = TextAreaField("Input", validators=[InputRequired(), Length(max=280)])
+    submit = SubmitField("Predict Sentiment")
+
+
+class LoginForm(FlaskForm):
+    username = StringField("Username", validators=[InputRequired()])
+    password = PasswordField("Password", validators=[InputRequired()])
+    submit = SubmitField("Login")
+
+
 class TwisentDisplay:
     """
     Holds the display data needed to render the page
     """
-    def __init__(self, twform: TwitterForm, txform: TextForm, username: str,
+    def __init__(self, twform: TwitterForm, geoform: GeoForm, txform: TextForm, username: str,
                  active_tab: str = "twitter", ip_blocked: str = None, pickle: bool = False,
                  *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.twform = twform
+        self.geoform = geoform
         self.txform = txform
         self.username = username
         self.data = []
@@ -162,6 +157,20 @@ class TwisentDisplay:
             return df.to_csv(index=False)
 
 
+def auth_user_verify(request):
+    return cookie_username(request) is not None
+
+
+def unauthorized_response(request):
+    tw = TwitterForm()
+    tw.throttle.data = TwitterAccessor.COUNT_THROTTLE
+    display = TwisentDisplay(tw, GeoForm(), TextForm(), username=cookie_username(request),
+                             active_tab="text")
+
+    return render_template('index.html', theme=app.config['THEME'], flask_debug=app.debug,
+                           display=display)
+
+
 @app.route('/')
 def welcome():
     if not auth_user_verify(request):
@@ -172,7 +181,7 @@ def welcome():
     # print("Remote IP", remote_ip, file=sys.stderr)
     tw = TwitterForm()
     tw.throttle.data = TwitterAccessor.COUNT_THROTTLE
-    display = TwisentDisplay(tw, TextForm(), username=cookie_username(request))
+    display = TwisentDisplay(tw, GeoForm(), TextForm(), username=cookie_username(request))
     display.messages.append("Pickle Path [{0:s}]".format(app.config['PICKLE_PATH']))
     display.messages.append("CWD [{0:s}]".format(os.getcwd()))
 
@@ -192,7 +201,7 @@ def text():
     form = TextForm()
     tw = TwitterForm()
     tw.throttle.data = TwitterAccessor.COUNT_THROTTLE
-    display = TwisentDisplay(tw, form, username=cookie_username(request), active_tab="text")
+    display = TwisentDisplay(tw, GeoForm(), form, username=cookie_username(request), active_tab="text")
     d = TwisentData()
     if form.validate_on_submit():
         d.text = form.tx.data
@@ -217,7 +226,7 @@ def twitter():
     theme = app.config['THEME']
 
     form = TwitterForm()
-    display = TwisentDisplay(form, TextForm(), username=cookie_username(request))
+    display = TwisentDisplay(form, GeoForm(), TextForm(), username=cookie_username(request))
 
     if form.validate_on_submit():
         TwitterAccessor.COUNT_THROTTLE = form.throttle.data
@@ -296,6 +305,45 @@ def twitter():
     return render_template('index.html', theme=theme, flask_debug=app.debug, display=display)
 
 
+@app.route('/geo', methods=['POST'])
+def geo():
+    #print("GEO route", file=sys.stderr)
+    if not auth_user_verify(request):
+        return unauthorized_response(request)
+
+    theme = app.config['THEME']
+
+    form = GeoForm()
+    tw = TwitterForm()
+    tw.throttle.data = TwitterAccessor.COUNT_THROTTLE
+    display = TwisentDisplay(tw, form, TextForm(), username=cookie_username(request), active_tab="geo")
+    if form.validate_on_submit():
+        display.messages.append("GEO mode")
+        display.messages.append("GEO: lat={0:s} lng={1:s} rad={2:s}".format(form.lat.data, form.lng.data, form.radius.data))
+        ta = TwitterAccessor()
+        try:
+            ta.get_tweets_by_geo(form.lat.data, form.lng.data, form.radius.data)
+        except TwitterError as e:
+            display.errors.append(e.message)
+
+        for tweet in ta.tweets:
+            d = TwisentData()
+            d.text = tweet.AsDict()['text']
+            d.tweet = tweet
+            if len(d.get_spacy_text()) == 0:
+                d.pred = -1
+                d.proba = -1
+            else:
+                d.pred = meta_model['pipeline'].predict([d.text])[0]
+                d.proba = meta_model['pipeline'].predict_proba([d.text])[0, d.pred]
+            display.data.append(d)
+    else:
+        display.errors.append("Click map to specify location.")
+        #display.messages.append("Geo sub, failed validation")
+
+    return render_template('index.html', theme=theme, flask_debug=app.debug, display=display)
+
+
 @app.route('/pickle', methods=['GET'])
 def pickle():
     if not auth_user_verify(request):
@@ -305,7 +353,7 @@ def pickle():
 
     tw = TwitterForm()
     tw.throttle.data = TwitterAccessor.COUNT_THROTTLE
-    display = TwisentDisplay(tw, TextForm(), username=cookie_username(request), pickle=True)
+    display = TwisentDisplay(tw, GeoForm(), TextForm(), username=cookie_username(request), pickle=True)
 
     for k, v in meta_model.items():
         display.messages.append("[" + k + "] [" + str(v) + "]")

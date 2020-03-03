@@ -132,6 +132,10 @@ class TwitterAccessor:
         query_string = urlencode({'q': str("(" + query + ")")})
         self.tweets = self.api.GetSearch(raw_query=query_string, count=TwitterAccessor.COUNT_THROTTLE)
 
+    def get_tweets_by_geo(self, lat, lng, radius):
+        geo_str = "{0:s},{1:s},{2:s}".format(lat, lng, radius)
+        self.tweets = self.api.GetSearch(geocode=geo_str, count=TwitterAccessor.COUNT_THROTTLE)
+
 
 def twisent_tokenizer(sentence, parser=English(), stop_words=spacy.lang.en.stop_words.STOP_WORDS,
                       punctuation=string.punctuation):

@@ -106,3 +106,8 @@
     text-align: right;
     padding: 10px;
 }
+
+#map-container {
+    margin-top: 2px;
+    height: 480px;
+}
