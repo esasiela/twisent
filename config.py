@@ -2,6 +2,9 @@
 DEBUG = False
 SECRET_KEY = "override me in env var"
 
+# set to "RANDOM" in dev to always reload CSS, override in ENV with a static version number
+CACHEBUSTER = "RANDOM"
+
 THEME = "default"
 DISPLAY_APP_NAME = "CHANGE_ME Hedge Court - TwiSent"
 DISPLAY_PAGE_MSG = 0

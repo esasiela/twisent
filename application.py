@@ -1,6 +1,6 @@
 import os
 import sys
-import json
+from random import random
 
 import urllib.parse
 
@@ -104,6 +104,12 @@ class TwisentDisplay:
         self.messages = []
         self.errors = []
         # print("TwisentDisplay constructor, len(data)", len(self.data), "len(messages)", len(self.messages), file=sys.stderr)
+
+    def cachebuster(self):
+        if app.config["CACHEBUSTER"] == "RANDOM":
+            return str(random())[2:]
+        else:
+            return app.config["CACHEBUSTER"]
 
     def get_count_by_label(self, label=None):
         """
