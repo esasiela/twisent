@@ -28,7 +28,7 @@
         <ul class="nav nav-pills pull-right">
           <li class="{% if not display.pickle %}active{% endif %}"><a href="/">Home</a></li>
           <li class="{% if display.pickle %}active{% endif %}"><a href="{{ url_for('pickle') }}">Pickle</a></li>
-          <li><a href="{{ url_for('login') }}">{% if username is not none %}({{ display.username }})</small>{% else %}Login{% endif %}</a></li>
+          <li><a href="{{ url_for('login') }}">{% if display.username is not none %}({{ display.username }}){% else %}Login{% endif %}</a></li>
           <!--
           <li><a href="#">Blog</a></li>
           <li><a href="#">Press</a></li>

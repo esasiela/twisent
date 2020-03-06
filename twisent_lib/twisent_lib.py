@@ -1,7 +1,11 @@
 import os
+import sys
 from datetime import datetime
 import string
+import requests
 from urllib3.request import urlencode
+from threading import Thread
+from queue import Queue
 
 import pandas as pd
 
@@ -135,6 +139,63 @@ class TwitterAccessor:
     def get_tweets_by_geo(self, lat, lng, radius):
         geo_str = "{0:s},{1:s},{2:s}".format(lat, lng, radius)
         self.tweets = self.api.GetSearch(geocode=geo_str, count=TwitterAccessor.COUNT_THROTTLE)
+
+
+class TwisentLog:
+    """Class to log access to twisent"""
+    def __init__(self, url: str, *args, **kwargs):
+        """
+        Instantiate a TwisentLog
+        :param url: the URL for the logging service
+        :param args: unused positional arguments
+        :param kwargs: unused keyword arguments
+        """
+        super().__init__(*args, **kwargs)
+        self.url = url
+        self.queue = Queue()
+        self.thread = Thread(target=self._process_queue)
+        self.thread.daemon = True
+        self.thread.start()
+
+    def log(self, log_type: str, user: str, data: dict = {}):
+        """
+        Puts a log message onto the queue for sending.
+        :param log_type: the type of activity being logged
+        :param user: the authenticated username
+        :param data: dict of log messages
+        :return: nothing
+        """
+        self.queue.put((log_type, user, data))
+
+    def _process_queue(self):
+        """
+        Thread target, daemon thread loop, sleeps until a message is put into the queue.
+        :return: nothing
+        """
+        while True:
+            log_type, user, data = self.queue.get()
+            # print("_process_queue, types", type(log_type), type(user), type(data), file=sys.stderr)
+            if data is None:
+                data = {}
+            data["env"] = os.environ.get("TWISENT_LOG_ENV", "none")
+            data["log_type"] = log_type
+            data["user"] = user
+            self._send_log(data)
+
+    def _send_log(self, data):
+        """
+        Sends the log message to the configured log URL service
+        :param data:
+        :return: nothing
+        """
+        print("_send_log, data:", str(data), file=sys.stderr)
+        try:
+            print("_send_log, request URL:", self.url, file=sys.stderr)
+            rsp = requests.get(self.url, params=data)
+            print("_send_log, req:", rsp.url, file=sys.stderr)
+            print("_send_log, rsp:", str(rsp), file=sys.stderr)
+        except Exception as e:
+            print("_send_log, error:", str(e))
 
 
 def twisent_tokenizer(sentence, parser=English(), stop_words=spacy.lang.en.stop_words.STOP_WORDS,

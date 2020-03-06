@@ -11,7 +11,7 @@ from wtforms.fields import PasswordField, HiddenField
 from wtforms.validators import InputRequired, Length, NumberRange
 
 # needed for the model
-from twisent_lib import TwisentData, TwitterAccessor
+from twisent_lib import TwisentData, TwitterAccessor, TwisentLog
 import pickle
 
 from twitter import TwitterError
@@ -29,6 +29,9 @@ meta_model = None
 # "pickle/twisent_trained_model.pkl"
 with open(app.config['PICKLE_PATH'], "rb") as f:
     meta_model = pickle.load(f)
+
+logger = TwisentLog(app.config["TWISENT_LOG_URL"])
+logger.log("boot", "--sys--")
 
 
 def ip_whitelist_verify(request):
@@ -57,8 +60,7 @@ def cookie_username(request):
         u, p = c.split(":")
         if p == os.environ.get("MAGIC_WORD"):
             return u
-    else:
-        return None
+    return None
 
 
 class TwitterForm(FlaskForm):
@@ -179,6 +181,8 @@ def unauthorized_response(request):
 
 @app.route('/')
 def welcome():
+    logger.log("home", cookie_username(request))
+
     if not auth_user_verify(request):
         return unauthorized_response(request)
 
@@ -221,6 +225,8 @@ def text():
         display.messages.append("TEXT mode")
         display.data.append(d)
 
+    logger.log("text", cookie_username(request), {"input": form.tx.data})
+
     return render_template('index.html', theme=theme, flask_debug=app.debug, display=display)
 
 
@@ -234,10 +240,13 @@ def twitter():
     form = TwitterForm()
     display = TwisentDisplay(form, GeoForm(), TextForm(), username=cookie_username(request))
 
+    log_data = {}
+
     if form.validate_on_submit():
         TwitterAccessor.COUNT_THROTTLE = form.throttle.data
 
         t = form.tw.data
+        log_data["input"] = t
         ta = TwitterAccessor()
 
         # first, look at t to see if it is a URL that we can do something with:
@@ -253,23 +262,27 @@ def twitter():
         if t.startswith(url_search_prefix):
             # kill the prefix, split on & and keep the first element, and pass it to the rest
             print("URL Search, search", t, file=sys.stderr)
+            log_data["url_search"] = "True"
             t = urllib.parse.unquote(t.replace(url_search_prefix, "").split("&")[0])
             form.tw.data = t
         elif t.startswith(url_hashtag_prefix):
             # kill the prefix, split on ? and keep the left half
             print("URL Search, hashtag", t, file=sys.stderr)
+            log_data["hashtag_search"] = "True"
             t = "#" + t.replace(url_hashtag_prefix, "").split("?")[0]
             form.tw.data = t
         elif url_status_delim in t:
             # split by /status/, grab the right half, split that by ? and grab the left half
             # more fun this way than a regex
             print("URL Search, status", t, file=sys.stderr)
+            log_data["status_search"] = "True"
             t = t.split(url_status_delim)[1].split("?")[0]
             form.tw.data = t
         elif t.startswith(url_username_prefix) and "/" not in t.replace(url_username_prefix, ""):
             # all we have is a single path element on the URL, that is the username
             # kill the prefix, split by ? and keep the left half
             print("URL Search, user", t, file=sys.stderr)
+            log_data["user_search"] = "True"
             t = "@" + t.replace(url_username_prefix, "").split("?")[0]
             form.tw.data = t
 
@@ -288,11 +301,14 @@ def twitter():
                 # if text is pure numeric (i.e. a status id) then perform a status id search
                 try:
                     status_id = int(t)
+                    log_data["status_id"] = str(status_id)
                     ta.get_tweet_by_id(status_id)
                 except ValueError:
+                    log_data["keyword_search"] = "true"
                     ta.get_tweets_by_search(t)
 
         except TwitterError as e:
+            log_data["twitter_error"] = e.message
             display.errors.append(e.message)
 
         for tweet in ta.tweets:
@@ -308,6 +324,9 @@ def twitter():
             d.messages.append("MODE: twitter - " + input_mode)
             display.data.append(d)
 
+    log_data["input_mode"] = input_mode
+    logger.log("twitter", cookie_username(request), log_data)
+
     return render_template('index.html', theme=theme, flask_debug=app.debug, display=display)
 
 
@@ -321,15 +340,19 @@ def geo():
 
     form = GeoForm()
     tw = TwitterForm()
+    log_data = {}
     tw.throttle.data = TwitterAccessor.COUNT_THROTTLE
     display = TwisentDisplay(tw, form, TextForm(), username=cookie_username(request), active_tab="geo")
     if form.validate_on_submit():
+        log_data["lat"] = form.lat.data
+        log_data["lng"] = form.lng.data
         display.messages.append("GEO mode")
         display.messages.append("GEO: lat={0:s} lng={1:s} rad={2:s}".format(form.lat.data, form.lng.data, form.radius.data))
         ta = TwitterAccessor()
         try:
             ta.get_tweets_by_geo(form.lat.data, form.lng.data, form.radius.data)
         except TwitterError as e:
+            log_data["twitter_error"] = e.message
             display.errors.append(e.message)
 
         for tweet in ta.tweets:
@@ -346,6 +369,8 @@ def geo():
     else:
         display.errors.append("Click map to specify location.")
         #display.messages.append("Geo sub, failed validation")
+
+    logger.log("geo", cookie_username(request), log_data)
 
     return render_template('index.html', theme=theme, flask_debug=app.debug, display=display)
 
@@ -364,6 +389,8 @@ def pickle():
     for k, v in meta_model.items():
         display.messages.append("[" + k + "] [" + str(v) + "]")
 
+    logger.log("pickle", cookie_username(request))
+
     return render_template('index.html', theme=theme, flask_debug=app.debug, display=display)
 
 
@@ -373,6 +400,7 @@ def login():
 
     if form.validate_on_submit():
         if form.password.data == os.environ.get("MAGIC_WORD"):
+            logger.log("login_success", form.username.data)
             res = make_response(
                 render_template('login.html', theme=app.config['THEME'], flask_debug=app.debug,
                                 form=form, msg="Successful Login", username=form.username.data)
@@ -381,7 +409,8 @@ def login():
                            max_age=(60 * 60 * 24 * 365 * 2))
             return res
         else:
-            # they submittited a bad password
+            # they submitted a bad password
+            logger.log("login_fail", form.username.data)
             res = make_response(
                 render_template('login.html', theme=app.config['THEME'], flask_debug=app.debug,
                                 form=form, msg="Invalid Password", username=None)

@@ -2,6 +2,9 @@
 DEBUG = False
 SECRET_KEY = "override me in env var"
 
+TWISENT_LOG_ENV = "override me in env var"
+TWISENT_LOG_URL = "override me in env var"
+
 # set to "RANDOM" in dev to always reload CSS, override in ENV with a static version number
 CACHEBUSTER = "RANDOM"
 
