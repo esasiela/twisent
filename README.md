@@ -2,6 +2,14 @@
 
 This repo is the home of a Twitter sentiment analyzer using machine learning and Python.
 
+Try it out in [production](https://twisent.hedgecourt.com/), running on AWS EC2 Elastic Beanstalk.
+
+View the docs in my [Hedge Court Software Engineering Portfolio](https://www.hedgecourt.com/portfolio/twisent/) page.
+
+The portfolio page is better, but here's a brief overview...
+
+## Module List
+
 The system consists of the following modules:
 
 1. Twitter API access
