@@ -60,7 +60,8 @@ def cookie_username(request):
         u, p = c.split(":")
         if p == os.environ.get("MAGIC_WORD"):
             return u
-    return None
+    # return None
+    return "Guest"
 
 
 class TwitterForm(FlaskForm):
