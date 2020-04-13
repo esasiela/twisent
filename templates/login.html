@@ -24,8 +24,11 @@
     <div class="container">
       <div class="header">
         <ul class="nav nav-pills pull-right">
-          <li><a href="/">Home</a></li>
+          <li><a href="/">TwiSent</a></li>
+          <li><a href="https://www.hedgecourt.com/portfolio/twisent/">Portfolio</a></li>
+            {% if config.SHOW_PICKLE %}
           <li><a href="{{ url_for('pickle') }}">Pickle</a></li>
+            {% endif %}
           <li class="active"><a href="{{ url_for('login') }}">{% if username is not none %}({{ username }})</small>{% else %}Login{% endif %}</a></li>
           <!--
           <li><a href="#">Blog</a></li>

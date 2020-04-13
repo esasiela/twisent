@@ -12,6 +12,7 @@ THEME = "default"
 DISPLAY_APP_NAME = "CHANGE_ME Hedge Court - TwiSent"
 DISPLAY_PAGE_MSG = 0
 
+SHOW_PICKLE = False
 PICKLE_PATH = "override me in env var"
 
 IP_WHITELIST = "override me in env var"
