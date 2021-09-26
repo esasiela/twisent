@@ -1,6 +1,7 @@
 import os
 import sys
 from random import random
+import pprint
 
 import urllib.parse
 
@@ -18,11 +19,20 @@ from twitter import TwitterError
 
 
 # Create the Flask app, load default config from config.py, load secret config from instance/config.py
-app = Flask(__name__)
+app = Flask(__name__, static_url_path="/app/twisent/static")
 app.config.from_object('config')
 for k, v in app.config.items():
     if os.environ.get(k) is not None:
         app.config[k] = os.environ.get(k)
+
+
+if app.config["DUMP_CONFIG"]:
+    print("Dumping Config...")
+    pp = pprint.PrettyPrinter(indent=4)
+    pp.pprint(app.config)
+else:
+    print("Suppressing config dump (set DUMP_CONFIG=True to enable")
+
 
 # global variable, suitable for demo purposes, not production
 meta_model = None
@@ -30,7 +40,7 @@ meta_model = None
 with open(app.config['PICKLE_PATH'], "rb") as f:
     meta_model = pickle.load(f)
 
-logger = TwisentLog(app.config["TWISENT_LOG_URL"])
+logger = TwisentLog(app.config["TWISENT_LOG_URL"], app.config["TWISENT_LOG_ENABLE"])
 logger.log("boot", "--sys--")
 
 
@@ -180,7 +190,7 @@ def unauthorized_response(request):
                            display=display)
 
 
-@app.route('/')
+@app.route('/app/twisent')
 def welcome():
     logger.log("home", cookie_username(request))
 
@@ -202,7 +212,7 @@ def welcome():
     return render_template('index.html', theme=theme, flask_debug=app.debug, display=display)
 
 
-@app.route('/text', methods=['POST'])
+@app.route('/app/twisent/text', methods=['POST'])
 def text():
     #if not auth_user_verify(request):
     #    return unauthorized_response(request)
@@ -231,7 +241,7 @@ def text():
     return render_template('index.html', theme=theme, flask_debug=app.debug, display=display)
 
 
-@app.route('/twitter', methods=['POST'])
+@app.route('/app/twisent/twitter', methods=['POST'])
 def twitter():
     if not auth_user_verify(request):
         return unauthorized_response(request)
@@ -331,7 +341,7 @@ def twitter():
     return render_template('index.html', theme=theme, flask_debug=app.debug, display=display)
 
 
-@app.route('/geo', methods=['POST'])
+@app.route('/app/twisent/geo', methods=['POST'])
 def geo():
     #print("GEO route", file=sys.stderr)
     if not auth_user_verify(request):
@@ -376,7 +386,7 @@ def geo():
     return render_template('index.html', theme=theme, flask_debug=app.debug, display=display)
 
 
-@app.route('/pickle', methods=['GET'])
+@app.route('/app/twisent/pickle', methods=['GET'])
 def pickle():
     if not auth_user_verify(request):
         return unauthorized_response(request)
@@ -395,7 +405,7 @@ def pickle():
     return render_template('index.html', theme=theme, flask_debug=app.debug, display=display)
 
 
-@app.route('/login', methods=['GET', 'POST'])
+@app.route('/app/twisent/login', methods=['GET', 'POST'])
 def login():
     form = LoginForm()
 

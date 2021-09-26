@@ -26,7 +26,7 @@
     <div class="container">
       <div class="header">
         <ul class="nav nav-pills pull-right">
-          <li class="{% if not display.pickle %}active{% endif %}"><a href="/">Home</a></li>
+          <li class="{% if not display.pickle %}active{% endif %}"><a href="{{ url_for('welcome') }}">Home</a></li>
           <li><a href="https://www.hedgecourt.com/portfolio/twisent/">Portfolio</a></li>
             {% if config.SHOW_PICKLE %}
           <li class="{% if display.pickle %}active{% endif %}"><a href="{{ url_for('pickle') }}">Pickle</a></li>

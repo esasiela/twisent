@@ -1,26 +1,22 @@
-FROM python:3
-#FROM ubuntu:14.04
+FROM python:3.8
 
-# Update packages
-#RUN apt-get update -y
+WORKDIR "/src"
 
-# Install Python Setuptools
-#RUN apt-get install -y python3-setuptools python3-pip
+COPY requirements.txt .
+RUN pip install -r requirements.txt
 
-# Install pip
-# RUN easy_install pip
+# Update spacy language pack
+RUN python -m spacy download en_core_web_sm
 
-# Add and install Python modules
-COPY requirements.txt /src/requirements.txt
-RUN cd /src; pip install -r requirements.txt
-RUN cd /src; python -m spacy download en_core_web_sm
+# WSGI server
+RUN pip install gunicorn
 
-# Bundle app source
-COPY . /src
-COPY ./pickle/twisent_trained_model.pkl /src/pickle/
+# Copy application files into image
+COPY . .
+COPY ./pickle/twisent_trained_model.pkl pickle/
 
 # Expose
 EXPOSE  5000
 
-# Run
-CMD ["python", "/src/application.py"]
+# CMD ["python", "/src/application.py"]
+CMD ["gunicorn", "--bind=0.0.0.0:5000", "application:app"]

@@ -143,7 +143,7 @@ class TwitterAccessor:
 
 class TwisentLog:
     """Class to log access to twisent"""
-    def __init__(self, url: str, *args, **kwargs):
+    def __init__(self, url: str, log_enable: bool, *args, **kwargs):
         """
         Instantiate a TwisentLog
         :param url: the URL for the logging service
@@ -152,6 +152,8 @@ class TwisentLog:
         """
         super().__init__(*args, **kwargs)
         self.url = url
+        self.log_enable = log_enable
+
         self.queue = Queue()
         self.thread = Thread(target=self._process_queue)
         self.thread.daemon = True
@@ -165,7 +167,8 @@ class TwisentLog:
         :param data: dict of log messages
         :return: nothing
         """
-        self.queue.put((log_type, user, data))
+        if self.log_enable:
+            self.queue.put((log_type, user, data))
 
     def _process_queue(self):
         """
